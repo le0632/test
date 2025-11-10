@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小型答题系统</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Microsoft YaHei', sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        
+        h2 {
+            color: #3498db;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 10px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #2980b9;
+        }
+        
+        .btn-secondary {
+            background-color: #95a5a6;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #7f8c8d;
+        }
+        
+        .btn-success {
+            background-color: #2ecc71;
+        }
+        
+        .btn-success:hover {
+            background-color: #27ae60;
+        }
+        
+        .question {
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .options {
+            margin-top: 10px;
+        }
+        
+        .option {
+            display: block;
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .option:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .option.selected {
+            background-color: #3498db;
+            color: white;
+            border-color: #2980b9;
+        }
+        
+        .timer {
+            text-align: center;
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #e74c3c;
+        }
+        
+        .progress {
+            height: 10px;
+            background-color: #ecf0f1;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background-color: #3498db;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .ranking-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .ranking-table th, .ranking-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .ranking-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        
+        .ranking-table tr:hover {
+            background-color: #f5f7fa;
+        }
+        
+        .ranking-table .top-1 {
+            background-color: #fff9e6;
+        }
+        
+        .ranking-table .top-2 {
+            background-color: #f0f8ff;
+        }
+        
+        .ranking-table .top-3 {
+            background-color: #f9f2ff;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .flex {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .result {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .score {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2ecc71;
+            margin: 10px 0;
+        }
+        
+        .time-used {
+            font-size: 18px;
+            color: #7f8c8d;
+            margin-bottom: 20px;
+        }
+        
+        .user-info {
+            background-color: #f8f9fa;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 登录界面 -->
+        <div id="login-screen" class="card">
+            <h1>小型答题系统</h1>
+            <div class="form-group">
+                <label for="nickname">请输入您的昵称：</label>
+                <input type="text" id="nickname" placeholder="请输入昵称">
+            </div>
+            <button id="start-btn">开始答题</button>
+        </div>
+
+        <!-- 答题界面 -->
+        <div id="quiz-screen" class="card hidden">
+            <div class="user-info">
+                <span>用户：<span id="current-user"></span></span>
+                <span>进度：<span id="progress-text">0/0</span></span>
+            </div>
+            <div class="progress">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+            <div class="timer">
+                用时：<span id="timer">00:00</span>
+            </div>
+            <div id="question-container">
+                <!-- 题目将动态加载到这里 -->
+            </div>
+            <div class="flex">
+                <button id="prev-btn" class="btn-secondary">上一题</button>
+                <button id="next-btn">下一题</button>
+            </div>
+        </div>
+
+        <!-- 结果界面 -->
+        <div id="result-screen" class="card hidden">
+            <div class="result">
+                <h2>答题完成！</h2>
+                <p>您的得分：</p>
+                <div class="score" id="final-score">0</div>
+                <p class="time-used">用时：<span id="final-time">00:00</span></p>
+                <button id="view-ranking-btn">查看排行榜</button>
+                <button id="restart-btn" class="btn-secondary">重新开始</button>
+            </div>
+        </div>
+
+        <!-- 排行榜界面 -->
+        <div id="ranking-screen" class="card hidden">
+            <h2>排行榜</h2>
+            <table class="ranking-table">
+                <thead>
+                    <tr>
+                        <th>排名</th>
+                        <th>昵称</th>
+                        <th>分数</th>
+                        <th>用时</th>
+                    </tr>
+                </thead>
+                <tbody id="ranking-body">
+                    <!-- 排行榜数据将动态加载到这里 -->
+                </tbody>
+            </table>
+            <div style="margin-top: 20px; text-align: center;">
+                <button id="back-to-start-btn">返回首页</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 题目数据
+        const questions = [
+            {
+                id: 1,
+                question: "JavaScript中，以下哪个方法用于向数组末尾添加元素？",
+                options: ["push()", "pop()", "shift()", "unshift()"],
+                answer: 0
+            },
+            {
+                id: 2,
+                question: "CSS中，以下哪个属性用于设置元素的外边距？",
+                options: ["padding", "border", "margin", "spacing"],
+                answer: 2
+            },
+            {
+                id: 3,
+                question: "HTML中，以下哪个标签用于创建有序列表？",
+                options: ["<ul>", "<ol>", "<li>", "<list>"],
+                answer: 1
+            },
+            {
+                id: 4,
+                question: "以下哪个不是JavaScript的数据类型？",
+                options: ["string", "boolean", "integer", "undefined"],
+                answer: 2
+            },
+            {
+                id: 5,
+                question: "Git中，以下哪个命令用于克隆远程仓库？",
+                options: ["git pull", "git clone", "git fetch", "git checkout"],
+                answer: 1
+            }
+        ];
+
+        // 应用状态
+        let state = {
+            currentUser: "",
+            currentQuestionIndex: 0,
+            userAnswers: [],
+            startTime: null,
+            timerInterval: null,
+            elapsedTime: 0
+        };
+
+        // DOM元素
+        const loginScreen = document.getElementById('login-screen');
+        const quizScreen = document.getElementById('quiz-screen');
+        const resultScreen = document.getElementById('result-screen');
+        const rankingScreen = document.getElementById('ranking-screen');
+
+        // 初始化应用
+        function initApp() {
+            // 绑定事件
+            document.getElementById('start-btn').addEventListener('click', startQuiz);
+            document.getElementById('prev-btn').addEventListener('click', prevQuestion);
+            document.getElementById('next-btn').addEventListener('click', nextQuestion);
+            document.getElementById('view-ranking-btn').addEventListener('click', showRanking);
+            document.getElementById('restart-btn').addEventListener('click', restartQuiz);
+            document.getElementById('back-to-start-btn').addEventListener('click', backToStart);
+            
+            // 检查是否有已保存的用户数据
+            const savedUser = localStorage.getItem('currentUser');
+            if (savedUser) {
+                document.getElementById('nickname').value = savedUser;
+            }
+        }
+
+        // 开始答题
+        function startQuiz() {
+            const nickname = document.getElementById('nickname').value.trim();
+            if (!nickname) {
+                alert('请输入昵称！');
+                return;
+            }
+            
+            state.currentUser = nickname;
+            state.currentQuestionIndex = 0;
+            state.userAnswers = new Array(questions.length).fill(null);
+            state.startTime = new Date();
+            state.elapsedTime = 0;
+            
+            // 保存用户信息
+            localStorage.setItem('currentUser', nickname);
+            
+            // 开始计时
+            startTimer();
+            
+            // 显示答题界面
+            loginScreen.classList.add('hidden');
+            quizScreen.classList.remove('hidden');
+            
+            // 显示当前用户
+            document.getElementById('current-user').textContent = nickname;
+            
+            // 加载第一题
+            loadQuestion();
+        }
+
+        // 加载题目
+        function loadQuestion() {
+            const question = questions[state.currentQuestionIndex];
+            const questionContainer = document.getElementById('question-container');
+            
+            // 更新进度
+            const progress = ((state.currentQuestionIndex + 1) / questions.length) * 100;
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+            document.getElementById('progress-text').textContent = `${state.currentQuestionIndex + 1}/${questions.length}`;
+            
+            // 构建题目HTML
+            let html = `
+                <div class="question">
+                    <h2>第${state.currentQuestionIndex + 1}题</h2>
+                    <p>${question.question}</p>
+                    <div class="options">
+            `;
+            
+            question.options.forEach((option, index) => {
+                const isSelected = state.userAnswers[state.currentQuestionIndex] === index;
+                html += `
+                    <div class="option ${isSelected ? 'selected' : ''}" data-index="${index}">
+                        ${String.fromCharCode(65 + index)}. ${option}
+                    </div>
+                `;
+            });
+            
+            html += `</div></div>`;
+            
+            questionContainer.innerHTML = html;
+            
+            // 绑定选项点击事件
+            document.querySelectorAll('.option').forEach(option => {
+                option.addEventListener('click', function() {
+                    // 清除其他选项的选中状态
+                    document.querySelectorAll('.option').forEach(opt => {
+                        opt.classList.remove('selected');
+                    });
+                    
+                    // 设置当前选项为选中状态
+                    this.classList.add('selected');
+                    
+                    // 保存用户答案
+                    state.userAnswers[state.currentQuestionIndex] = parseInt(this.getAttribute('data-index'));
+                });
+            });
+            
+            // 更新按钮状态
+            document.getElementById('prev-btn').disabled = state.currentQuestionIndex === 0;
+            document.getElementById('next-btn').textContent = 
+                state.currentQuestionIndex === questions.length - 1 ? '提交答案' : '下一题';
+        }
+
+        // 上一题
+        function prevQuestion() {
+            if (state.currentQuestionIndex > 0) {
+                state.currentQuestionIndex--;
+                loadQuestion();
+            }
+        }
+
+        // 下一题/提交答案
+        function nextQuestion() {
+            // 检查是否已回答当前题目
+            if (state.userAnswers[state.currentQuestionIndex] === null) {
+                alert('请先选择答案！');
+                return;
+            }
+            
+            if (state.currentQuestionIndex < questions.length - 1) {
+                state.currentQuestionIndex++;
+                loadQuestion();
+            } else {
+                // 提交答案
+                submitQuiz();
+            }
+        }
+
+        // 提交答案
+        function submitQuiz() {
+            // 停止计时
+            clearInterval(state.timerInterval);
+            
+            // 计算得分
+            let score = 0;
+            state.userAnswers.forEach((answer, index) => {
+                if (answer === questions[index].answer) {
+                    score++;
+                }
+            });
+            
+            // 保存成绩
+            saveResult(score);
+            
+            // 显示结果
+            document.getElementById('final-score').textContent = `${score}/${questions.length}`;
+            document.getElementById('final-time').textContent = formatTime(state.elapsedTime);
+            
+            // 切换到结果界面
+            quizScreen.classList.add('hidden');
+            resultScreen.classList.remove('hidden');
+        }
+
+        // 保存结果
+        function saveResult(score) {
+            // 获取现有排行榜
+            let ranking = JSON.parse(localStorage.getItem('ranking')) || [];
+            
+            // 添加新结果
+            ranking.push({
+                nickname: state.currentUser,
+                score: score,
+                time: state.elapsedTime,
+                date: new Date().toISOString()
+            });
+            
+            // 排序：分数优先，用时其次
+            ranking.sort((a, b) => {
+                if (a.score !== b.score) {
+                    return b.score - a.score; // 分数高者在前
+                }
+                return a.time - b.time; // 用时少者在前
+            });
+            
+            // 只保留前100名
+            if (ranking.length > 100) {
+                ranking = ranking.slice(0, 100);
+            }
+            
+            // 保存排行榜
+            localStorage.setItem('ranking', JSON.stringify(ranking));
+        }
+
+        // 显示排行榜
+        function showRanking() {
+            // 获取排行榜数据
+            const ranking = JSON.parse(localStorage.getItem('ranking')) || [];
+            
+            // 构建排行榜HTML
+            const rankingBody = document.getElementById('ranking-body');
+            let html = '';
+            
+            if (ranking.length === 0) {
+                html = '<tr><td colspan="4" style="text-align: center;">暂无数据</td></tr>';
+            } else {
+                ranking.forEach((item, index) => {
+                    let rowClass = '';
+                    if (index === 0) rowClass = 'top-1';
+                    else if (index === 1) rowClass = 'top-2';
+                    else if (index === 2) rowClass = 'top-3';
+                    
+                    html += `
+                        <tr class="${rowClass}">
+                            <td>${index + 1}</td>
+                            <td>${item.nickname}</td>
+                            <td>${item.score}/${questions.length}</td>
+                            <td>${formatTime(item.time)}</td>
+                        </tr>
+                    `;
+                });
+            }
+            
+            rankingBody.innerHTML = html;
+            
+            // 切换到排行榜界面
+            resultScreen.classList.add('hidden');
+            rankingScreen.classList.remove('hidden');
+        }
+
+        // 重新开始
+        function restartQuiz() {
+            resultScreen.classList.add('hidden');
+            loginScreen.classList.remove('hidden');
+        }
+
+        // 返回首页
+        function backToStart() {
+            rankingScreen.classList.add('hidden');
+            loginScreen.classList.remove('hidden');
+        }
+
+        // 开始计时
+        function startTimer() {
+            state.timerInterval = setInterval(() => {
+                state.elapsedTime += 1;
+                document.getElementById('timer').textContent = formatTime(state.elapsedTime);
+            }, 1000);
+        }
+
+        // 格式化时间
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // 初始化应用
+        window.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>
