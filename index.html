@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>小型答题系统</title>
+    <title>答题系统</title>
     <style>
         * {
             box-sizing: border-box;
@@ -218,7 +218,7 @@
     <div class="container">
         <!-- 登录界面 -->
         <div id="login-screen" class="card">
-            <h1>小型答题系统</h1>
+            <h1>答题系统</h1>
             <div class="form-group">
                 <label for="nickname">请输入您的昵称：</label>
                 <input type="text" id="nickname" placeholder="请输入昵称">
@@ -286,34 +286,74 @@
         const questions = [
             {
                 id: 1,
-                question: "JavaScript中，以下哪个方法用于向数组末尾添加元素？",
-                options: ["push()", "pop()", "shift()", "unshift()"],
-                answer: 0
+                question: "吉林大学前卫南区的两个体育馆分别是（）体育馆和前卫体育馆。",
+                options: ["宋志平", "宋智平", "宋治平", "宋致平"],
+                answer: 2,
+                type: "choice"
             },
             {
                 id: 2,
-                question: "CSS中，以下哪个属性用于设置元素的外边距？",
-                options: ["padding", "border", "margin", "spacing"],
-                answer: 2
+                question: "吉林大学共有（）个学科门类。",
+                options: ["10", "11", "12", "13"],
+                answer: 3,
+                type: "choice"
             },
             {
                 id: 3,
-                question: "HTML中，以下哪个标签用于创建有序列表？",
-                options: ["<ul>", "<ol>", "<li>", "<list>"],
-                answer: 1
+                question: "吉林大学于2000年由多所高校合并组建而成，不包含以下（    ）高校。",
+                options: ["吉林工业大学", "吉林农业大学", "长春邮电学院", "长春科技大学"],
+                answer: 1,
+                type: "choice"
             },
             {
                 id: 4,
-                question: "以下哪个不是JavaScript的数据类型？",
-                options: ["string", "boolean", "integer", "undefined"],
-                answer: 2
+                question: "吉林大学始建于（    ）年。",
+                options: ["1945", "1946", "1947", "1948"],
+                answer: 0,
+                type: "choice"
             },
             {
                 id: 5,
-                question: "Git中，以下哪个命令用于克隆远程仓库？",
-                options: ["git pull", "git clone", "git fetch", "git checkout"],
-                answer: 1
-            }
+                question: "下列专业中不属于匡亚明班（拔尖学生培养基地）的专业是（    ）。",
+                options: ["汉语言文学", "考古学", "历史学", "哲学"],
+                answer: 2,
+                type: "choice"
+            },
+            {
+                id: 6,
+                question: "列举三个吉林大学前卫南区以吉大先贤名字命名的教学楼。（用英文逗号分隔）",
+                type: "fill",
+                correctAnswers: ["王湘浩楼", "吕振羽楼", "唐敖庆楼", "匡亚明楼"],
+                requiredMatches: 3
+            },
+            {
+                id: 7,
+                question: "吉林大学在长春有（）个校区，分别是（）。（用英文逗号分隔）",
+                type: "fill",
+                correctAnswers: ["6", "前卫校区", "新民校区", "朝阳校区", "和平校区", "南湖校区", "南岭校区"],
+                requiredMatches: 7
+            },
+            {
+                id: 8,
+                question: "前卫四餐厅旁边是（）和（）两个餐厅。（用英文逗号分隔）",
+                type: "fill",
+                correctAnswers: ["翔远餐厅", "鸿鹄餐厅"],
+                requiredMatches: 2
+            },
+            {
+                id: 9,
+                question: "吉林大学前卫南区的两个湖分别叫（）和（）。（用英文逗号分隔）",
+                type: "fill",
+                correctAnswers: ["清湖", "晏湖"],
+                requiredMatches: 2
+            },
+            {
+                id: 10,
+                question: "吉林大学现任校长是（）。",
+                type: "fill",
+                correctAnswers: ["张希"],
+                requiredMatches: 1
+            },
         ];
 
         // 应用状态
@@ -391,41 +431,75 @@
             document.getElementById('progress-text').textContent = `${state.currentQuestionIndex + 1}/${questions.length}`;
             
             // 构建题目HTML
-            let html = `
-                <div class="question">
-                    <h2>第${state.currentQuestionIndex + 1}题</h2>
-                    <p>${question.question}</p>
-                    <div class="options">
-            `;
+            let html = '';
             
-            question.options.forEach((option, index) => {
-                const isSelected = state.userAnswers[state.currentQuestionIndex] === index;
-                html += `
-                    <div class="option ${isSelected ? 'selected' : ''}" data-index="${index}">
-                        ${String.fromCharCode(65 + index)}. ${option}
+            if (question.type === "choice") {
+                // 选择题HTML
+                html = `
+                    <div class="question">
+                        <h2>第${state.currentQuestionIndex + 1}题（选择题）</h2>
+                        <p>${question.question}</p>
+                        <div class="options">
+                `;
+                
+                question.options.forEach((option, index) => {
+                    const isSelected = state.userAnswers[state.currentQuestionIndex] === index;
+                    html += `
+                        <div class="option ${isSelected ? 'selected' : ''}" data-index="${index}">
+                            ${String.fromCharCode(65 + index)}. ${option}
+                        </div>
+                    `;
+                });
+                
+                html += `</div></div>`;
+            } else if (question.type === "fill") {
+                // 填空题HTML
+                const userAnswer = state.userAnswers[state.currentQuestionIndex] || '';
+                html = `
+                    <div class="question">
+                        <h2>第${state.currentQuestionIndex + 1}题（填空题）</h2>
+                        <p>${question.question}</p>
+                        <div class="form-group">
+                            <label for="fill-answer">您的答案：</label>
+                            <input type="text" id="fill-answer" placeholder="请输入答案，多个答案用英文逗号分隔" 
+                                value="${userAnswer}" style="width: 100%; padding: 12px;">
+                            <p style="margin-top: 8px; font-size: 14px; color: #666;">
+                                提示：请输入${question.requiredMatches}个正确答案即可得满分
+                            </p>
+                        </div>
                     </div>
                 `;
-            });
-            
-            html += `</div></div>`;
+            }
             
             questionContainer.innerHTML = html;
             
             // 绑定选项点击事件
-            document.querySelectorAll('.option').forEach(option => {
-                option.addEventListener('click', function() {
-                    // 清除其他选项的选中状态
-                    document.querySelectorAll('.option').forEach(opt => {
-                        opt.classList.remove('selected');
+            if (question.type === "choice") {
+                // 选择题选项点击事件
+                document.querySelectorAll('.option').forEach(option => {
+                    option.addEventListener('click', function() {
+                        // 清除其他选项的选中状态
+                        document.querySelectorAll('.option').forEach(opt => {
+                            opt.classList.remove('selected');
+                        });
+                        
+                        // 设置当前选项为选中状态
+                        this.classList.add('selected');
+                        
+                        // 保存用户答案
+                        state.userAnswers[state.currentQuestionIndex] = parseInt(this.getAttribute('data-index'));
                     });
-                    
-                    // 设置当前选项为选中状态
-                    this.classList.add('selected');
-                    
-                    // 保存用户答案
-                    state.userAnswers[state.currentQuestionIndex] = parseInt(this.getAttribute('data-index'));
                 });
-            });
+            } else if (question.type === "fill") {
+                // 填空题输入事件
+                const fillInput = document.getElementById('fill-answer');
+                fillInput.addEventListener('input', function() {
+                    state.userAnswers[state.currentQuestionIndex] = this.value.trim();
+                });
+                
+                // 自动聚焦到输入框
+                fillInput.focus();
+            }
             
             // 更新按钮状态
             document.getElementById('prev-btn').disabled = state.currentQuestionIndex === 0;
@@ -443,10 +517,22 @@
 
         // 下一题/提交答案
         function nextQuestion() {
+            const currentQuestion = questions[state.currentQuestionIndex];
+            
             // 检查是否已回答当前题目
-            if (state.userAnswers[state.currentQuestionIndex] === null) {
-                alert('请先选择答案！');
-                return;
+            if (currentQuestion.type === "choice") {
+                // 选择题验证
+                if (state.userAnswers[state.currentQuestionIndex] === null) {
+                    alert('请先选择答案！');
+                    return;
+                }
+            } else if (currentQuestion.type === "fill") {
+                // 填空题验证
+                if (!state.userAnswers[state.currentQuestionIndex] || 
+                    state.userAnswers[state.currentQuestionIndex].trim() === '') {
+                    alert('请输入答案！');
+                    return;
+                }
             }
             
             if (state.currentQuestionIndex < questions.length - 1) {
@@ -458,16 +544,57 @@
             }
         }
 
+
+        // 新增函数：评估填空题答案
+        function evaluateFillAnswer(userAnswer, correctAnswers, requiredMatches) {
+            if (!userAnswer) return false;
+            
+            // 将用户答案按逗号分割并清理
+            const userAnswers = userAnswer.split(',')
+                .map(ans => ans.trim().toLowerCase())
+                .filter(ans => ans.length > 0);
+            
+            // 计算匹配的正确答案数量
+            let matchCount = 0;
+            const matchedCorrect = new Set();
+            
+            userAnswers.forEach(userAns => {
+                // 在正确答案中查找匹配
+                for (const correctAns of correctAnswers) {
+                    const normalizedCorrect = correctAns.trim().toLowerCase();
+                    if (userAns === normalizedCorrect && !matchedCorrect.has(normalizedCorrect)) {
+                        matchCount++;
+                        matchedCorrect.add(normalizedCorrect);
+                        break;
+                    }
+                }
+            });
+            
+            // 返回是否达到要求的匹配数量
+            return matchCount >= requiredMatches;
+        }
+
+
         // 提交答案
         function submitQuiz() {
             // 停止计时
             clearInterval(state.timerInterval);
             
-            // 计算得分
+            // 计算得分 - 修改部分：支持填空题评分
             let score = 0;
             state.userAnswers.forEach((answer, index) => {
-                if (answer === questions[index].answer) {
-                    score++;
+                const question = questions[index];
+                
+                if (question.type === "choice") {
+                    // 选择题评分
+                    if (answer === question.answer) {
+                        score++;
+                    }
+                } else if (question.type === "fill") {
+                    // 填空题评分
+                    if (answer && evaluateFillAnswer(answer, question.correctAnswers, question.requiredMatches)) {
+                        score++;
+                    }
                 }
             });
             
@@ -482,6 +609,7 @@
             quizScreen.classList.add('hidden');
             resultScreen.classList.remove('hidden');
         }
+
 
         // 保存结果
         function saveResult(score) {
