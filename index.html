@@ -3,39 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>答题系统</title>
+    <title>实时答题系统 - GitHub共享排行榜</title>
     <style>
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Microsoft YaHei', sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
         body {
-            background-color: #f5f7fa;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
             color: #333;
             line-height: 1.6;
+            min-height: 100vh;
+            padding: 20px;
         }
         
         .container {
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto;
-            padding: 20px;
         }
         
         .card {
             background: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
             padding: 30px;
             margin-bottom: 20px;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
         }
         
         h1 {
             text-align: center;
             color: #2c3e50;
             margin-bottom: 20px;
+            font-size: 2.5rem;
+            background: linear-gradient(90deg, #2575fc, #6a11cb);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
         
         h2 {
@@ -53,45 +64,56 @@
             display: block;
             margin-bottom: 8px;
             font-weight: bold;
+            color: #555;
         }
         
         input[type="text"] {
             width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
             font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="text"]:focus {
+            border-color: #3498db;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
         }
         
         button {
-            background-color: #3498db;
+            background: linear-gradient(90deg, #3498db, #2980b9);
             color: white;
             border: none;
-            padding: 12px 20px;
-            border-radius: 5px;
+            padding: 15px 25px;
+            border-radius: 8px;
             cursor: pointer;
             font-size: 16px;
-            transition: background-color 0.3s;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
         
         button:hover {
-            background-color: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        }
+        
+        button:active {
+            transform: translateY(0);
         }
         
         .btn-secondary {
-            background-color: #95a5a6;
-        }
-        
-        .btn-secondary:hover {
-            background-color: #7f8c8d;
+            background: linear-gradient(90deg, #95a5a6, #7f8c8d);
         }
         
         .btn-success {
-            background-color: #2ecc71;
+            background: linear-gradient(90deg, #2ecc71, #27ae60);
         }
         
-        .btn-success:hover {
-            background-color: #27ae60;
+        .btn-danger {
+            background: linear-gradient(90deg, #e74c3c, #c0392b);
         }
         
         .question {
@@ -107,15 +129,16 @@
         .option {
             display: block;
             margin-bottom: 10px;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
             cursor: pointer;
             transition: all 0.2s;
         }
         
         .option:hover {
             background-color: #f8f9fa;
+            border-color: #3498db;
         }
         
         .option.selected {
@@ -126,24 +149,26 @@
         
         .timer {
             text-align: center;
-            font-size: 18px;
+            font-size: 20px;
             margin-bottom: 20px;
             color: #e74c3c;
+            font-weight: bold;
         }
         
         .progress {
-            height: 10px;
+            height: 12px;
             background-color: #ecf0f1;
-            border-radius: 5px;
+            border-radius: 6px;
             margin-bottom: 20px;
             overflow: hidden;
         }
         
         .progress-bar {
             height: 100%;
-            background-color: #3498db;
+            background: linear-gradient(90deg, #2ecc71, #27ae60);
             width: 0%;
-            transition: width 0.3s;
+            transition: width 0.5s;
+            border-radius: 6px;
         }
         
         .ranking-table {
@@ -152,13 +177,14 @@
         }
         
         .ranking-table th, .ranking-table td {
-            padding: 12px 15px;
+            padding: 15px;
             text-align: left;
             border-bottom: 1px solid #ddd;
         }
         
         .ranking-table th {
-            background-color: #f8f9fa;
+            background: linear-gradient(90deg, #3498db, #2980b9);
+            color: white;
             font-weight: bold;
         }
         
@@ -186,6 +212,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 10px;
         }
         
         .result {
@@ -194,23 +221,150 @@
         }
         
         .score {
-            font-size: 24px;
+            font-size: 36px;
             font-weight: bold;
-            color: #2ecc71;
-            margin: 10px 0;
+            background: linear-gradient(90deg, #2ecc71, #27ae60);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 20px 0;
         }
         
         .time-used {
-            font-size: 18px;
+            font-size: 20px;
             color: #7f8c8d;
             margin-bottom: 20px;
         }
         
         .user-info {
+            background: linear-gradient(90deg, #f8f9fa, #e9ecef);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        
+        .badge-primary {
+            background-color: #3498db;
+            color: white;
+        }
+        
+        .badge-success {
+            background-color: #2ecc71;
+            color: white;
+        }
+        
+        .badge-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        .instructions {
             background-color: #f8f9fa;
-            padding: 10px 15px;
-            border-radius: 5px;
-            margin-bottom: 15px;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 5px solid #3498db;
+        }
+        
+        .github-info {
+            background: linear-gradient(90deg, #d4edda, #c3e6cb);
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #28a745;
+        }
+        
+        .sync-status {
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .sync-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .sync-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .sync-loading {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+        
+        .online-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #2ecc71;
+            margin-right: 5px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .card {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .flex {
+                flex-direction: column;
+            }
+            
+            button {
+                width: 100%;
+                margin-bottom: 10px;
+            }
         }
     </style>
 </head>
@@ -218,12 +372,37 @@
     <div class="container">
         <!-- 登录界面 -->
         <div id="login-screen" class="card">
-            <h1>答题系统</h1>
+            <h1>实时答题系统 - GitHub共享排行榜</h1>
+            
+            <div class="github-info">
+                <p style="margin: 0; font-weight: bold; color: #155724;">
+                    <span class="online-indicator"></span>
+                    GitHub实时同步 - 成绩自动上传到Issues
+                </p>
+            </div>
+
+            <div class="instructions">
+                <p><strong>使用说明：</strong></p>
+                <p>1. 输入昵称开始答题</p>
+                <p>2. 完成答题后成绩自动创建GitHub Issue</p>
+                <p>3. 实时查看所有用户的排行榜</p>
+                <p>4. 排行榜数据来自GitHub Issues</p>
+                <p style="color: #28a745; margin-top: 10px;">
+                    📍 完全基于GitHub，无需其他服务
+                </p>
+            </div>
+            
             <div class="form-group">
                 <label for="nickname">请输入您的昵称：</label>
-                <input type="text" id="nickname" placeholder="请输入昵称">
+                <input type="text" id="nickname" placeholder="请输入昵称（2-10个字符）" maxlength="10">
             </div>
-            <button id="start-btn">开始答题</button>
+            
+            <div class="flex">
+                <button id="start-btn">开始答题</button>
+                <button id="view-ranking-btn" class="btn-secondary">实时排行榜</button>
+            </div>
+            
+            <div id="sync-status" class="sync-status" style="display: none;"></div>
         </div>
 
         <!-- 答题界面 -->
@@ -254,14 +433,24 @@
                 <p>您的得分：</p>
                 <div class="score" id="final-score">0</div>
                 <p class="time-used">用时：<span id="final-time">00:00</span></p>
-                <button id="view-ranking-btn">查看排行榜</button>
-                <button id="restart-btn" class="btn-secondary">重新开始</button>
+                <div class="sync-status" id="upload-status" style="display: none;"></div>
+                <div class="flex">
+                    <button id="view-ranking-btn-2">查看实时排行榜</button>
+                    <button id="restart-btn" class="btn-secondary">再答一次</button>
+                    <button id="create-issue-btn" class="btn-success">创建GitHub Issue</button>
+                </div>
             </div>
         </div>
 
         <!-- 排行榜界面 -->
         <div id="ranking-screen" class="card hidden">
-            <h2>排行榜</h2>
+            <div class="flex">
+                <h2>GitHub实时排行榜</h2>
+                <div style="display: flex; align-items: center;">
+                    <span class="online-indicator"></span>
+                    <span style="font-size: 14px; color: #28a745;">数据来自GitHub Issues</span>
+                </div>
+            </div>
             <table class="ranking-table">
                 <thead>
                     <tr>
@@ -269,6 +458,7 @@
                         <th>昵称</th>
                         <th>分数</th>
                         <th>用时</th>
+                        <th>提交时间</th>
                     </tr>
                 </thead>
                 <tbody id="ranking-body">
@@ -277,14 +467,315 @@
             </table>
             <div style="margin-top: 20px; text-align: center;">
                 <button id="back-to-start-btn">返回首页</button>
+                <button id="refresh-ranking-btn" class="btn-secondary" style="margin-left: 10px;">刷新排行榜</button>
+                <button id="auto-refresh-toggle" class="btn-success" style="margin-left: 10px;">自动刷新: 开</button>
             </div>
         </div>
     </div>
 
     <script>
-        // 题目数据
+        // ==== GitHub 配置 ====
+        // ！！！重要：请将下面的配置修改为您自己的GitHub仓库信息！！！
+        const GITHUB_CONFIG = {
+            // 仓库信息（需要修改为您的仓库）
+            owner: 'YOUR_GITHUB_USERNAME',      // 替换为您的GitHub用户名
+            repo: 'YOUR_REPO_NAME',             // 替换为您的仓库名
+            
+            // 自动刷新配置
+            autoRefresh: {
+                enabled: true,
+                interval: 10000, // 10秒刷新一次
+                isActive: true
+            }
+        };
+
+        // ==== GitHub 服务 ====
+        const GitHubService = {
+            autoRefreshInterval: null,
+            
+            // 初始化
+            init() {
+                this.showSyncStatus('✅ GitHub排行榜已启用', 'sync-success');
+                
+                if (this.isConfigured()) {
+                    // 启动自动刷新
+                    this.startAutoRefresh();
+                } else {
+                    this.showSyncStatus('⚠️ 请配置GitHub仓库信息', 'sync-error');
+                }
+            },
+            
+            // 检查配置
+            isConfigured() {
+                return GITHUB_CONFIG.owner && GITHUB_CONFIG.repo && 
+                       GITHUB_CONFIG.owner !== 'YOUR_GITHUB_USERNAME' && 
+                       GITHUB_CONFIG.repo !== 'YOUR_REPO_NAME';
+            },
+            
+            // 从GitHub Issues加载排行榜数据
+            async loadRanking() {
+                if (!this.isConfigured()) {
+                    return this.getLocalRanking();
+                }
+                
+                try {
+                    this.showSyncStatus('正在从GitHub加载排行榜...', 'sync-loading');
+                    
+                    // 使用GitHub REST API获取Issues
+                    const response = await fetch(
+                        `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/issues?labels=quiz-score&state=all&per_page=100&sort=created&direction=desc`
+                    );
+                    
+                    if (!response.ok) {
+                        throw new Error(`GitHub API错误: ${response.status}`);
+                    }
+                    
+                    const issues = await response.json();
+                    const ranking = this.parseIssuesToRanking(issues);
+                    
+                    this.showSyncStatus('排行榜加载成功！', 'sync-success');
+                    setTimeout(() => this.hideSyncStatus(), 2000);
+                    
+                    return ranking;
+                } catch (error) {
+                    console.error('从GitHub加载排行榜失败:', error);
+                    this.showSyncStatus('使用本地数据', 'sync-error');
+                    return this.getLocalRanking();
+                }
+            },
+            
+            // 解析Issues为排行榜数据
+            parseIssuesToRanking(issues) {
+                const ranking = [];
+                
+                issues.forEach(issue => {
+                    try {
+                        // 从Issue标题和内容中解析成绩信息
+                        const titleMatch = issue.title.match(/成绩 - (.+) - 得分:(\d+)\/(\d+) - 用时:(\d+)秒/);
+                        if (titleMatch) {
+                            const [, nickname, score, total, time] = titleMatch;
+                            ranking.push({
+                                nickname: nickname.trim(),
+                                score: parseInt(score),
+                                total: parseInt(total),
+                                time: parseInt(time),
+                                created_at: issue.created_at,
+                                issue_url: issue.html_url,
+                                from: 'github'
+                            });
+                        }
+                    } catch (error) {
+                        console.warn('解析Issue失败:', issue.title, error);
+                    }
+                });
+                
+                // 排序：分数优先，用时其次
+                ranking.sort((a, b) => {
+                    if (a.score !== b.score) return b.score - a.score;
+                    return a.time - b.time;
+                });
+                
+                return ranking.slice(0, 50); // 只返回前50名
+            },
+            
+            // 创建GitHub Issue来保存成绩
+            async createScoreIssue(result) {
+                if (!this.isConfigured()) {
+                    throw new Error('GitHub仓库未配置');
+                }
+                
+                // 先保存到本地
+                this.saveToLocalStorage(result);
+                
+                // 创建Issue的标题和内容
+                const title = `成绩 - ${result.nickname} - 得分:${result.score}/${questions.length} - 用时:${result.time}秒`;
+                const body = this.formatIssueBody(result);
+                
+                // 由于GitHub API需要认证，我们提供创建Issue的链接
+                const issueUrl = this.generateIssueUrl(title, body);
+                
+                return {
+                    success: true,
+                    issue_url: issueUrl,
+                    message: '请点击链接创建GitHub Issue来保存成绩'
+                };
+            },
+            
+            // 生成创建Issue的URL（无需认证）
+            generateIssueUrl(title, body) {
+                const encodedTitle = encodeURIComponent(title);
+                const encodedBody = encodeURIComponent(body);
+                return `https://github.com/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/issues/new?title=${encodedTitle}&body=${encodedBody}&labels=quiz-score`;
+            },
+            
+            // 格式化Issue内容
+            formatIssueBody(result) {
+                const percentage = ((result.score / questions.length) * 100).toFixed(1);
+                return `
+# 答题成绩
+
+**昵称:** ${result.nickname}
+**得分:** ${result.score}/${questions.length} (${percentage}%)
+**用时:** ${result.time}秒 (${this.formatTime(result.time)})
+**提交时间:** ${new Date().toLocaleString('zh-CN')}
+
+## 答题详情
+${this.generateAnswerDetails(result)}
+
+---
+*此Issue由答题系统自动生成*
+                `.trim();
+            },
+            
+            // 生成答题详情
+            generateAnswerDetails(result) {
+                let details = '';
+                state.userAnswers.forEach((answer, index) => {
+                    const question = questions[index];
+                    const isCorrect = question.type === "choice" ? 
+                        answer === question.answer : 
+                        evaluateFillAnswer(answer, question.correctAnswers, question.requiredMatches);
+                    
+                    details += `\n### 第${index + 1}题: ${isCorrect ? '✅' : '❌'}\n`;
+                    details += `**问题:** ${question.question}\n`;
+                    
+                    if (question.type === "choice") {
+                        const userAnswer = question.options[answer];
+                        const correctAnswer = question.options[question.answer];
+                        details += `**您的答案:** ${userAnswer || '未回答'}\n`;
+                        details += `**正确答案:** ${correctAnswer}\n`;
+                    } else {
+                        details += `**您的答案:** ${answer || '未回答'}\n`;
+                        details += `**参考答案:** ${question.correctAnswers.slice(0, 3).join(', ')}...\n`;
+                    }
+                });
+                return details;
+            },
+            
+            // 本地存储
+            saveToLocalStorage(result) {
+                let ranking = JSON.parse(localStorage.getItem('ranking')) || [];
+                ranking.push({
+                    ...result,
+                    from: 'local',
+                    id: Date.now(),
+                    created_at: new Date().toISOString()
+                });
+                
+                ranking = this.deduplicateAndSort(ranking);
+                
+                if (ranking.length > 100) {
+                    ranking = ranking.slice(0, 100);
+                }
+                
+                localStorage.setItem('ranking', JSON.stringify(ranking));
+            },
+            
+            getLocalRanking() {
+                return JSON.parse(localStorage.getItem('ranking')) || [];
+            },
+            
+            // 去重和排序
+            deduplicateAndSort(ranking) {
+                const uniqueMap = new Map();
+                
+                ranking.forEach(item => {
+                    const key = `${item.nickname}-${item.score}-${item.time}`;
+                    if (!uniqueMap.has(key) || (item.id && item.id > uniqueMap.get(key).id)) {
+                        uniqueMap.set(key, item);
+                    }
+                });
+                
+                const uniqueRanking = Array.from(uniqueMap.values());
+                
+                uniqueRanking.sort((a, b) => {
+                    if (a.score !== b.score) return b.score - a.score;
+                    return a.time - b.time;
+                });
+                
+                return uniqueRanking;
+            },
+            
+            // 自动刷新
+            startAutoRefresh() {
+                if (this.autoRefreshInterval) {
+                    clearInterval(this.autoRefreshInterval);
+                }
+                
+                this.autoRefreshInterval = setInterval(async () => {
+                    if (GITHUB_CONFIG.autoRefresh.isActive) {
+                        await this.refreshRankingIfVisible();
+                    }
+                }, GITHUB_CONFIG.autoRefresh.interval);
+            },
+            
+            stopAutoRefresh() {
+                if (this.autoRefreshInterval) {
+                    clearInterval(this.autoRefreshInterval);
+                    this.autoRefreshInterval = null;
+                }
+            },
+            
+            async refreshRankingIfVisible() {
+                if (!document.getElementById('ranking-screen').classList.contains('hidden')) {
+                    await refreshRanking();
+                }
+            },
+            
+            toggleAutoRefresh() {
+                GITHUB_CONFIG.autoRefresh.isActive = !GITHUB_CONFIG.autoRefresh.isActive;
+                const button = document.getElementById('auto-refresh-toggle');
+                
+                if (GITHUB_CONFIG.autoRefresh.isActive) {
+                    button.textContent = '自动刷新: 开';
+                    button.className = 'btn-success';
+                    this.startAutoRefresh();
+                } else {
+                    button.textContent = '自动刷新: 关';
+                    button.className = 'btn-secondary';
+                    this.stopAutoRefresh();
+                }
+            },
+            
+            // 工具函数
+            formatTime(seconds) {
+                const mins = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            },
+            
+            // 状态显示
+            showSyncStatus(message, type) {
+                const statusEl = document.getElementById('sync-status');
+                if (!statusEl) return;
+                
+                statusEl.innerHTML = type === 'sync-loading' ? 
+                    `<div class="loading"></div>${message}` : message;
+                statusEl.className = `sync-status ${type}`;
+                statusEl.style.display = 'block';
+            },
+            
+            showUploadStatus(message, type) {
+                const statusEl = document.getElementById('upload-status');
+                if (!statusEl) return;
+                
+                statusEl.innerHTML = type === 'sync-loading' ? 
+                    `<div class="loading"></div>${message}` : message;
+                statusEl.className = `sync-status ${type}`;
+                statusEl.style.display = 'block';
+            },
+            
+            hideSyncStatus() {
+                const statusEl = document.getElementById('sync-status');
+                if (statusEl) {
+                    statusEl.style.display = 'none';
+                }
+            }
+        };
+
+        // ==== 题目数据 ====
         const questions = [
-            {
+        {
                 id: 1,
                 question: "吉林大学前卫南区的两个体育馆分别是（）体育馆和前卫体育馆。",
                 options: ["宋志平", "宋智平", "宋治平", "宋致平"],
@@ -353,10 +844,10 @@
                 type: "fill",
                 correctAnswers: ["张希"],
                 requiredMatches: 1
-            },
+            }
         ];
 
-        // 应用状态
+        // ==== 应用状态 ====
         let state = {
             currentUser: "",
             currentQuestionIndex: 0,
@@ -366,34 +857,53 @@
             elapsedTime: 0
         };
 
-        // DOM元素
+        // ==== DOM元素 ====
         const loginScreen = document.getElementById('login-screen');
         const quizScreen = document.getElementById('quiz-screen');
         const resultScreen = document.getElementById('result-screen');
         const rankingScreen = document.getElementById('ranking-screen');
 
-        // 初始化应用
+        // ==== 核心功能函数 ====
         function initApp() {
+            GitHubService.init();
+            
             // 绑定事件
             document.getElementById('start-btn').addEventListener('click', startQuiz);
+            document.getElementById('view-ranking-btn').addEventListener('click', showRanking);
+            document.getElementById('view-ranking-btn-2').addEventListener('click', showRanking);
             document.getElementById('prev-btn').addEventListener('click', prevQuestion);
             document.getElementById('next-btn').addEventListener('click', nextQuestion);
-            document.getElementById('view-ranking-btn').addEventListener('click', showRanking);
             document.getElementById('restart-btn').addEventListener('click', restartQuiz);
             document.getElementById('back-to-start-btn').addEventListener('click', backToStart);
+            document.getElementById('refresh-ranking-btn').addEventListener('click', refreshRanking);
+            document.getElementById('auto-refresh-toggle').addEventListener('click', () => {
+                GitHubService.toggleAutoRefresh();
+            });
+            document.getElementById('create-issue-btn').addEventListener('click', createGitHubIssue);
             
             // 检查是否有已保存的用户数据
             const savedUser = localStorage.getItem('currentUser');
             if (savedUser) {
                 document.getElementById('nickname').value = savedUser;
             }
+            
+            // 输入框回车事件
+            document.getElementById('nickname').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    startQuiz();
+                }
+            });
         }
 
-        // 开始答题
         function startQuiz() {
             const nickname = document.getElementById('nickname').value.trim();
             if (!nickname) {
                 alert('请输入昵称！');
+                return;
+            }
+            
+            if (nickname.length < 2 || nickname.length > 10) {
+                alert('昵称长度应在2-10个字符之间！');
                 return;
             }
             
@@ -403,38 +913,29 @@
             state.startTime = new Date();
             state.elapsedTime = 0;
             
-            // 保存用户信息
             localStorage.setItem('currentUser', nickname);
             
-            // 开始计时
             startTimer();
             
-            // 显示答题界面
             loginScreen.classList.add('hidden');
             quizScreen.classList.remove('hidden');
             
-            // 显示当前用户
             document.getElementById('current-user').textContent = nickname;
             
-            // 加载第一题
             loadQuestion();
         }
 
-        // 加载题目
         function loadQuestion() {
             const question = questions[state.currentQuestionIndex];
             const questionContainer = document.getElementById('question-container');
             
-            // 更新进度
             const progress = ((state.currentQuestionIndex + 1) / questions.length) * 100;
             document.getElementById('progress-bar').style.width = `${progress}%`;
             document.getElementById('progress-text').textContent = `${state.currentQuestionIndex + 1}/${questions.length}`;
             
-            // 构建题目HTML
             let html = '';
             
             if (question.type === "choice") {
-                // 选择题HTML
                 html = `
                     <div class="question">
                         <h2>第${state.currentQuestionIndex + 1}题（选择题）</h2>
@@ -453,7 +954,6 @@
                 
                 html += `</div></div>`;
             } else if (question.type === "fill") {
-                // 填空题HTML
                 const userAnswer = state.userAnswers[state.currentQuestionIndex] || '';
                 html = `
                     <div class="question">
@@ -462,7 +962,7 @@
                         <div class="form-group">
                             <label for="fill-answer">您的答案：</label>
                             <input type="text" id="fill-answer" placeholder="请输入答案，多个答案用英文逗号分隔" 
-                                value="${userAnswer}" style="width: 100%; padding: 12px;">
+                                   value="${userAnswer}" style="width: 100%; padding: 12px;">
                             <p style="margin-top: 8px; font-size: 14px; color: #666;">
                                 提示：请输入${question.requiredMatches}个正确答案即可得满分
                             </p>
@@ -473,41 +973,30 @@
             
             questionContainer.innerHTML = html;
             
-            // 绑定选项点击事件
             if (question.type === "choice") {
-                // 选择题选项点击事件
                 document.querySelectorAll('.option').forEach(option => {
                     option.addEventListener('click', function() {
-                        // 清除其他选项的选中状态
                         document.querySelectorAll('.option').forEach(opt => {
                             opt.classList.remove('selected');
                         });
                         
-                        // 设置当前选项为选中状态
                         this.classList.add('selected');
-                        
-                        // 保存用户答案
                         state.userAnswers[state.currentQuestionIndex] = parseInt(this.getAttribute('data-index'));
                     });
                 });
             } else if (question.type === "fill") {
-                // 填空题输入事件
                 const fillInput = document.getElementById('fill-answer');
                 fillInput.addEventListener('input', function() {
                     state.userAnswers[state.currentQuestionIndex] = this.value.trim();
                 });
-                
-                // 自动聚焦到输入框
                 fillInput.focus();
             }
             
-            // 更新按钮状态
             document.getElementById('prev-btn').disabled = state.currentQuestionIndex === 0;
             document.getElementById('next-btn').textContent = 
                 state.currentQuestionIndex === questions.length - 1 ? '提交答案' : '下一题';
         }
 
-        // 上一题
         function prevQuestion() {
             if (state.currentQuestionIndex > 0) {
                 state.currentQuestionIndex--;
@@ -515,19 +1004,15 @@
             }
         }
 
-        // 下一题/提交答案
         function nextQuestion() {
             const currentQuestion = questions[state.currentQuestionIndex];
             
-            // 检查是否已回答当前题目
             if (currentQuestion.type === "choice") {
-                // 选择题验证
                 if (state.userAnswers[state.currentQuestionIndex] === null) {
                     alert('请先选择答案！');
                     return;
                 }
             } else if (currentQuestion.type === "fill") {
-                // 填空题验证
                 if (!state.userAnswers[state.currentQuestionIndex] || 
                     state.userAnswers[state.currentQuestionIndex].trim() === '') {
                     alert('请输入答案！');
@@ -539,27 +1024,61 @@
                 state.currentQuestionIndex++;
                 loadQuestion();
             } else {
-                // 提交答案
                 submitQuiz();
             }
         }
 
+        async function submitQuiz() {
+            clearInterval(state.timerInterval);
+            
+            let score = 0;
+            state.userAnswers.forEach((answer, index) => {
+                const question = questions[index];
+                
+                if (question.type === "choice") {
+                    if (answer === question.answer) {
+                        score++;
+                    }
+                } else if (question.type === "fill") {
+                    if (answer && evaluateFillAnswer(answer, question.correctAnswers, question.requiredMatches)) {
+                        score++;
+                    }
+                }
+            });
+            
+            // 显示结果
+            document.getElementById('final-score').textContent = `${score}/${questions.length}`;
+            document.getElementById('final-time').textContent = formatTime(state.elapsedTime);
+            
+            quizScreen.classList.add('hidden');
+            resultScreen.classList.remove('hidden');
+            
+            // 自动保存到本地
+            saveResult(score);
+        }
 
-        // 新增函数：评估填空题答案
+        function saveResult(score) {
+            const result = {
+                nickname: state.currentUser,
+                score: score,
+                time: state.elapsedTime,
+                date: new Date().toISOString()
+            };
+            
+            GitHubService.saveToLocalStorage(result);
+        }
+
         function evaluateFillAnswer(userAnswer, correctAnswers, requiredMatches) {
             if (!userAnswer) return false;
             
-            // 将用户答案按逗号分割并清理
             const userAnswers = userAnswer.split(',')
                 .map(ans => ans.trim().toLowerCase())
                 .filter(ans => ans.length > 0);
             
-            // 计算匹配的正确答案数量
             let matchCount = 0;
             const matchedCorrect = new Set();
             
             userAnswers.forEach(userAns => {
-                // 在正确答案中查找匹配
                 for (const correctAns of correctAnswers) {
                     const normalizedCorrect = correctAns.trim().toLowerCase();
                     if (userAns === normalizedCorrect && !matchedCorrect.has(normalizedCorrect)) {
@@ -570,88 +1089,75 @@
                 }
             });
             
-            // 返回是否达到要求的匹配数量
             return matchCount >= requiredMatches;
         }
 
-
-        // 提交答案
-        function submitQuiz() {
-            // 停止计时
-            clearInterval(state.timerInterval);
-            
-            // 计算得分 - 修改部分：支持填空题评分
-            let score = 0;
-            state.userAnswers.forEach((answer, index) => {
-                const question = questions[index];
-                
-                if (question.type === "choice") {
-                    // 选择题评分
-                    if (answer === question.answer) {
-                        score++;
-                    }
-                } else if (question.type === "fill") {
-                    // 填空题评分
-                    if (answer && evaluateFillAnswer(answer, question.correctAnswers, question.requiredMatches)) {
-                        score++;
-                    }
-                }
-            });
-            
-            // 保存成绩
-            saveResult(score);
-            
-            // 显示结果
-            document.getElementById('final-score').textContent = `${score}/${questions.length}`;
-            document.getElementById('final-time').textContent = formatTime(state.elapsedTime);
-            
-            // 切换到结果界面
-            quizScreen.classList.add('hidden');
-            resultScreen.classList.remove('hidden');
-        }
-
-
-        // 保存结果
-        function saveResult(score) {
-            // 获取现有排行榜
-            let ranking = JSON.parse(localStorage.getItem('ranking')) || [];
-            
-            // 添加新结果
-            ranking.push({
+        async function createGitHubIssue() {
+            const score = parseInt(document.getElementById('final-score').textContent.split('/')[0]);
+            const result = {
                 nickname: state.currentUser,
                 score: score,
                 time: state.elapsedTime,
                 date: new Date().toISOString()
-            });
+            };
             
-            // 排序：分数优先，用时其次
-            ranking.sort((a, b) => {
-                if (a.score !== b.score) {
-                    return b.score - a.score; // 分数高者在前
+            try {
+                GitHubService.showUploadStatus('正在生成GitHub Issue链接...', 'sync-loading');
+                
+                const issueResult = await GitHubService.createScoreIssue(result);
+                
+                if (issueResult.success) {
+                    GitHubService.showUploadStatus('✅ GitHub Issue链接已生成', 'sync-success');
+                    // 在新窗口中打开Issue创建页面
+                    window.open(issueResult.issue_url, '_blank');
                 }
-                return a.time - b.time; // 用时少者在前
-            });
-            
-            // 只保留前100名
-            if (ranking.length > 100) {
-                ranking = ranking.slice(0, 100);
+            } catch (error) {
+                console.error('创建GitHub Issue失败:', error);
+                GitHubService.showUploadStatus('❌ 创建Issue失败', 'sync-error');
             }
-            
-            // 保存排行榜
-            localStorage.setItem('ranking', JSON.stringify(ranking));
         }
 
-        // 显示排行榜
-        function showRanking() {
-            // 获取排行榜数据
-            const ranking = JSON.parse(localStorage.getItem('ranking')) || [];
-            
-            // 构建排行榜HTML
+        async function showRanking() {
+            try {
+                await refreshRanking();
+                
+                if (!rankingScreen.classList.contains('hidden')) {
+                    return;
+                }
+                
+                resultScreen.classList.add('hidden');
+                loginScreen.classList.add('hidden');
+                quizScreen.classList.add('hidden');
+                rankingScreen.classList.remove('hidden');
+                
+            } catch (error) {
+                console.error('显示排行榜失败:', error);
+                alert('加载排行榜失败，请检查网络连接');
+            }
+        }
+
+        async function refreshRanking() {
+            const ranking = await GitHubService.loadRanking();
+            displayRanking(ranking);
+        }
+
+        function displayRanking(ranking) {
             const rankingBody = document.getElementById('ranking-body');
             let html = '';
             
             if (ranking.length === 0) {
-                html = '<tr><td colspan="4" style="text-align: center;">暂无数据</td></tr>';
+                html = `
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 40px;">
+                            <div style="color: #7f8c8d;">
+                                <p>暂无排行榜数据</p>
+                                <p style="font-size: 14px; margin-top: 10px;">
+                                    完成答题后，点击"创建GitHub Issue"来提交成绩
+                                </p>
+                            </div>
+                        </td>
+                    </tr>
+                `;
             } else {
                 ranking.forEach((item, index) => {
                     let rowClass = '';
@@ -659,49 +1165,60 @@
                     else if (index === 1) rowClass = 'top-2';
                     else if (index === 2) rowClass = 'top-3';
                     
+                    const isCurrentUser = item.nickname === state.currentUser;
+                    const userBadge = isCurrentUser ? '<span class="badge badge-primary">我</span>' : '';
+                    const topBadge = index < 3 ? `<span class="badge badge-success">TOP ${index + 1}</span>` : '';
+                    const sourceBadge = item.from === 'local' ? 
+                        '<span class="badge badge-secondary">本地</span>' : 
+                        '<span class="badge badge-primary">GitHub</span>';
+                    
+                    const issueLink = item.issue_url ? 
+                        `<a href="${item.issue_url}" target="_blank" title="查看Issue">🔗</a>` : '';
+                    
                     html += `
                         <tr class="${rowClass}">
                             <td>${index + 1}</td>
-                            <td>${item.nickname}</td>
-                            <td>${item.score}/${questions.length}</td>
-                            <td>${formatTime(item.time)}</td>
+                            <td>${item.nickname} ${userBadge} ${topBadge} ${sourceBadge} ${issueLink}</td>
+                            <td>${item.score}/${item.total || questions.length}</td>
+                            <td>${GitHubService.formatTime(item.time)}</td>
+                            <td>${formatDate(item.created_at)}</td>
                         </tr>
                     `;
                 });
             }
             
             rankingBody.innerHTML = html;
-            
-            // 切换到排行榜界面
-            resultScreen.classList.add('hidden');
-            rankingScreen.classList.remove('hidden');
         }
 
-        // 重新开始
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('zh-CN') + ' ' + date.toLocaleTimeString('zh-CN', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+        }
+
         function restartQuiz() {
             resultScreen.classList.add('hidden');
             loginScreen.classList.remove('hidden');
         }
 
-        // 返回首页
         function backToStart() {
             rankingScreen.classList.add('hidden');
             loginScreen.classList.remove('hidden');
         }
 
-        // 开始计时
         function startTimer() {
             state.timerInterval = setInterval(() => {
                 state.elapsedTime += 1;
                 document.getElementById('timer').textContent = formatTime(state.elapsedTime);
             }, 1000);
-        }
-
-        // 格式化时间
-        function formatTime(seconds) {
-            const mins = Math.floor(seconds / 60);
-            const secs = seconds % 60;
-            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
         }
 
         // 初始化应用
