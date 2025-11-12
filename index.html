@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>实时答题系统 - GitHub共享排行榜</title>
+    <title>答题系统</title>
     <style>
         * {
             box-sizing: border-box;
@@ -372,7 +372,7 @@
     <div class="container">
         <!-- 登录界面 -->
         <div id="login-screen" class="card">
-            <h1>实时答题系统 - GitHub共享排行榜</h1>
+            <h1>答题系统</h1>
             
             <div class="github-info">
                 <p style="margin: 0; font-weight: bold; color: #155724;">
@@ -387,9 +387,6 @@
                 <p>2. 完成答题后成绩自动创建GitHub Issue</p>
                 <p>3. 实时查看所有用户的排行榜</p>
                 <p>4. 排行榜数据来自GitHub Issues</p>
-                <p style="color: #28a745; margin-top: 10px;">
-                    📍 完全基于GitHub，无需其他服务
-                </p>
             </div>
             
             <div class="form-group">
@@ -445,7 +442,7 @@
         <!-- 排行榜界面 -->
         <div id="ranking-screen" class="card hidden">
             <div class="flex">
-                <h2>GitHub实时排行榜</h2>
+                <h2>排行榜</h2>
                 <div style="display: flex; align-items: center;">
                     <span class="online-indicator"></span>
                     <span style="font-size: 14px; color: #28a745;">数据来自GitHub Issues</span>
@@ -475,11 +472,10 @@
 
     <script>
         // ==== GitHub 配置 ====
-        // ！！！重要：请将下面的配置修改为您自己的GitHub仓库信息！！！
         const GITHUB_CONFIG = {
-            // 仓库信息（需要修改为您的仓库）
-            owner: 'le0632',      // 替换为您的GitHub用户名
-            repo: 'test',             // 替换为您的仓库名
+            // 仓库信息
+            owner: 'le0632',
+            repo: 'test',
             
             // 自动刷新配置
             autoRefresh: {
