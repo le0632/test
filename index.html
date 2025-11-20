@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>实时答题系统 - GitHub共享排行榜</title>
+    <title>答题系统</title>
     <style>
         * {
             box-sizing: border-box;
@@ -163,12 +163,27 @@
             text-align: center;
             font-size: 18px;
             margin-bottom: 15px;
-            color: #e74c3c;
+            color: #2ecc71;
             font-weight: bold;
-            background: #fff3cd;
+            background: #d4edda;
             padding: 10px;
             border-radius: 8px;
-            border: 2px solid #ffeaa7;
+            border: 2px solid #c3e6cb;
+            transition: all 0.3s;
+        }
+        
+        .countdown-warning {
+            background: #fff3cd;
+            color: #856404;
+            border-color: #ffeaa7;
+            animation: warning-pulse 1s infinite;
+        }
+        
+        .countdown-danger {
+            background: #f8d7da;
+            color: #721c24;
+            border-color: #f5c6cb;
+            animation: danger-pulse 0.5s infinite;
         }
         
         .progress {
@@ -385,8 +400,10 @@
             100% { background-color: #fff3cd; }
         }
         
-        .warning-pulse {
-            animation: warning-pulse 1s infinite;
+        @keyframes danger-pulse {
+            0% { background-color: #f8d7da; }
+            50% { background-color: #f5c6cb; }
+            100% { background-color: #f8d7da; }
         }
         
         @media (max-width: 768px) {
@@ -417,7 +434,7 @@
     <div class="container">
         <!-- 登录界面 -->
         <div id="login-screen" class="card">
-            <h1>实时答题系统 - GitHub共享排行榜</h1>
+            <h1>答题系统</h1>
             
             <div class="github-info">
                 <p style="margin: 0; font-weight: bold; color: #155724;">
@@ -429,24 +446,20 @@
             <div class="instructions">
                 <p><strong>使用说明：</strong></p>
                 <p>1. 输入昵称开始答题</p>
-                <p>2. 必须在开始时间后10分钟内完成提交</p>
-                <p>3. 完成答题后成绩自动创建GitHub Issue</p>
-                <p>4. 实时查看所有用户的排行榜</p>
-                <p style="color: #28a745; margin-top: 10px;">
-                    📍 完全基于GitHub，无需其他服务
-                </p>
+                <p>2. 开始答题后有10分钟时间完成提交</p>
+                <p>3. 必须在10分钟内完成所有题目并提交</p>
+                <p>4. 超时提交将无法保存成绩</p>
             </div>
 
             <!-- 时间配置区域 -->
             <div class="time-config">
                 <p style="margin-bottom: 10px; font-weight: bold;">答题时间设置</p>
                 <div class="form-group">
-                    <label for="start-time">开始时间：</label>
-                    <input type="datetime-local" id="start-time">
-                </div>
-                <div class="form-group">
-                    <label for="duration">答题时长（分钟）：</label>
-                    <input type="text" id="duration" value="10" readonly style="background-color: #f8f9fa;">
+                    <label for="quiz-duration">答题时长（分钟）：</label>
+                    <select id="quiz-duration" style="width: 100%; padding: 15px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px;">
+                        <option value="5">5分钟（快速模式）</option>
+                        <option value="10" selected>10分钟（标准模式）</option>
+                    </select>
                 </div>
                 <div id="time-status" class="sync-status" style="display: none;"></div>
             </div>
@@ -491,7 +504,7 @@
         <!-- 结果界面 -->
         <div id="result-screen" class="card hidden">
             <div class="result">
-                <h2>答题完成！</h2>
+                <h2 id="result-title">答题完成！</h2>
                 <p>您的得分：</p>
                 <div class="score" id="final-score">0</div>
                 <p class="time-used">用时：<span id="final-time">00:00</span></p>
@@ -551,48 +564,57 @@
 
         // ==== 时间管理 ====
         const TimeManager = {
-            startTime: null,
-            duration: 10 * 60 * 1000, // 10分钟，单位毫秒
+            quizStartTime: null,      // 用户开始答题的时间
+            timeLimit: 10 * 60 * 1000, // 默认10分钟，单位毫秒
             countdownInterval: null,
             timeRemaining: 0,
             
             // 初始化时间设置
             init() {
-                // 设置默认开始时间为当前时间
-                const now = new Date();
-                const defaultStartTime = new Date(now.getTime() + 5 * 60 * 1000); // 默认5分钟后开始
-                document.getElementById('start-time').value = this.formatDateTimeLocal(defaultStartTime);
+                // 设置默认时间限制
+                this.updateTimeLimit();
                 
-                this.updateTimeStatus();
+                // 监听时间限制选择变化
+                document.getElementById('quiz-duration').addEventListener('change', () => {
+                    this.updateTimeLimit();
+                });
             },
             
-            // 检查是否可以开始答题
-            canStartQuiz() {
-                const startTimeInput = document.getElementById('start-time').value;
-                if (!startTimeInput) {
-                    this.showTimeStatus('请设置开始时间', 'sync-error');
-                    return false;
-                }
+            // 更新时间限制
+            updateTimeLimit() {
+                const durationSelect = document.getElementById('quiz-duration');
+                const minutes = parseInt(durationSelect.value);
+                this.timeLimit = minutes * 60 * 1000;
                 
-                this.startTime = new Date(startTimeInput);
+                this.showTimeStatus(`已设置答题时间：${minutes}分钟`, 'sync-success');
+            },
+            
+            // 开始答题计时
+            startQuiz() {
+                this.quizStartTime = new Date();
+                this.timeRemaining = this.timeLimit;
+                this.startCountdown();
+                
+                console.log(`答题开始时间: ${this.quizStartTime.toLocaleString()}`);
+                console.log(`时间限制: ${this.timeLimit/1000}秒`);
+            },
+            
+            // 检查是否超时
+            isTimeUp() {
+                if (!this.quizStartTime) return false;
+                
                 const now = new Date();
+                const timeElapsed = now - this.quizStartTime;
+                return timeElapsed > this.timeLimit;
+            },
+            
+            // 获取剩余时间（毫秒）
+            getRemainingTime() {
+                if (!this.quizStartTime) return this.timeLimit;
                 
-                if (now < this.startTime) {
-                    const timeUntilStart = this.startTime - now;
-                    const minutes = Math.floor(timeUntilStart / 60000);
-                    const seconds = Math.floor((timeUntilStart % 60000) / 1000);
-                    this.showTimeStatus(`答题尚未开始，请在 ${minutes}分${seconds}秒后开始`, 'sync-warning');
-                    return false;
-                }
-                
-                if (now > this.startTime + this.duration) {
-                    this.showTimeStatus('答题时间已结束', 'sync-error');
-                    return false;
-                }
-                
-                this.timeRemaining = this.startTime + this.duration - now;
-                this.showTimeStatus('可以开始答题', 'sync-success');
-                return true;
+                const now = new Date();
+                const timeElapsed = now - this.quizStartTime;
+                return Math.max(0, this.timeLimit - timeElapsed);
             },
             
             // 开始倒计时
@@ -602,7 +624,7 @@
                 }
                 
                 this.countdownInterval = setInterval(() => {
-                    this.timeRemaining -= 1000;
+                    this.timeRemaining = this.getRemainingTime();
                     
                     if (this.timeRemaining <= 0) {
                         this.timeRemaining = 0;
@@ -613,13 +635,12 @@
                     
                     this.updateCountdownDisplay();
                     
-                    // 最后1分钟警告
-                    if (this.timeRemaining <= 60000) {
-                        this.showTimeWarning();
-                    }
+                    // 根据剩余时间改变样式
+                    this.updateCountdownStyle();
                 }, 1000);
                 
                 this.updateCountdownDisplay();
+                this.updateCountdownStyle();
             },
             
             // 停止倒计时
@@ -637,16 +658,21 @@
                 const countdownElement = document.getElementById('countdown-timer');
                 
                 countdownElement.textContent = `剩余时间：${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            },
+            
+            // 更新倒计时样式
+            updateCountdownStyle() {
+                const countdownElement = document.getElementById('countdown-timer');
                 
-                // 根据剩余时间改变样式
+                // 移除所有样式类
+                countdownElement.classList.remove('countdown-warning', 'countdown-danger');
+                
                 if (this.timeRemaining <= 60000) {
-                    countdownElement.style.background = '#f8d7da';
-                    countdownElement.style.color = '#721c24';
-                    countdownElement.style.borderColor = '#f5c6cb';
-                } else if (this.timeRemaining <= 300000) { // 5分钟
-                    countdownElement.style.background = '#fff3cd';
-                    countdownElement.style.color = '#856404';
-                    countdownElement.style.borderColor = '#ffeaa7';
+                    // 最后1分钟：红色警告
+                    countdownElement.classList.add('countdown-danger');
+                } else if (this.timeRemaining <= 180000) {
+                    // 最后3分钟：黄色警告
+                    countdownElement.classList.add('countdown-warning');
                 }
             },
             
@@ -654,71 +680,35 @@
             handleTimeUp() {
                 const countdownElement = document.getElementById('countdown-timer');
                 countdownElement.textContent = '时间到！答题已结束';
-                countdownElement.style.background = '#f8d7da';
-                countdownElement.style.color = '#721c24';
-                countdownElement.classList.add('warning-pulse');
+                countdownElement.classList.add('countdown-danger');
                 
-                // 禁用下一题按钮，强制提交
+                // 自动提交答案
                 const nextBtn = document.getElementById('next-btn');
                 if (nextBtn.textContent === '提交答案') {
                     nextBtn.click(); // 自动提交
                 } else {
-                    nextBtn.disabled = true;
-                    nextBtn.textContent = '时间到';
+                    // 如果用户还在答题中，强制提交
+                    submitQuiz();
                 }
                 
-                alert('答题时间已结束！系统将自动提交您的答案。');
+                // 显示警告信息
+                setTimeout(() => {
+                    alert('答题时间已结束！系统已自动提交您的答案。');
+                }, 500);
             },
             
-            // 显示时间警告
-            showTimeWarning() {
-                const countdownElement = document.getElementById('countdown-timer');
-                countdownElement.classList.add('warning-pulse');
-            },
-            
-            // 检查是否在有效时间内
-            isWithinTimeLimit() {
-                const now = new Date();
-                return now >= this.startTime && now <= this.startTime + this.duration;
-            },
-            
-            // 获取剩余时间（秒）
-            getRemainingTime() {
-                const now = new Date();
-                return Math.max(0, Math.floor((this.startTime + this.duration - now) / 1000));
-            },
-            
-            // 格式化日期时间为本地格式
-            formatDateTimeLocal(date) {
-                const year = date.getFullYear();
-                const month = (date.getMonth() + 1).toString().padStart(2, '0');
-                const day = date.getDate().toString().padStart(2, '0');
-                const hours = date.getHours().toString().padStart(2, '0');
-                const minutes = date.getMinutes().toString().padStart(2, '0');
+            // 获取答题用时（秒）
+            getTimeUsed() {
+                if (!this.quizStartTime) return 0;
                 
-                return `${year}-${month}-${day}T${hours}:${minutes}`;
+                const now = new Date();
+                const timeUsed = now - this.quizStartTime;
+                return Math.min(Math.floor(timeUsed / 1000), this.timeLimit / 1000);
             },
             
-            // 更新时间状态显示
-            updateTimeStatus() {
-                const startTimeInput = document.getElementById('start-time').value;
-                if (!startTimeInput) return;
-                
-                this.startTime = new Date(startTimeInput);
-                const now = new Date();
-                const endTime = new Date(this.startTime.getTime() + this.duration);
-                
-                if (now < this.startTime) {
-                    const timeUntilStart = this.startTime - now;
-                    const minutes = Math.floor(timeUntilStart / 60000);
-                    this.showTimeStatus(`答题将在 ${minutes} 分钟后开始`, 'sync-warning');
-                } else if (now > endTime) {
-                    this.showTimeStatus('答题时间已结束', 'sync-error');
-                } else {
-                    const timeRemaining = endTime - now;
-                    const minutes = Math.floor(timeRemaining / 60000);
-                    this.showTimeStatus(`答题进行中，剩余 ${minutes} 分钟`, 'sync-success');
-                }
+            // 检查提交是否有效（在时间限制内）
+            isValidSubmission() {
+                return !this.isTimeUp();
             },
             
             // 显示时间状态
@@ -729,6 +719,18 @@
                 statusEl.textContent = message;
                 statusEl.className = `sync-status ${type}`;
                 statusEl.style.display = 'block';
+                
+                // 3秒后自动隐藏
+                setTimeout(() => {
+                    statusEl.style.display = 'none';
+                }, 3000);
+            },
+            
+            // 重置时间管理器
+            reset() {
+                this.stopCountdown();
+                this.quizStartTime = null;
+                this.timeRemaining = this.timeLimit;
             }
         };
 
@@ -854,7 +856,9 @@
             // 格式化Issue内容
             formatIssueBody(result) {
                 const percentage = ((result.score / questions.length) * 100).toFixed(1);
-                const timeStatus = TimeManager.isWithinTimeLimit() ? '有效提交' : '超时提交';
+                const timeStatus = TimeManager.isValidSubmission() ? '有效提交' : '超时提交';
+                const durationSelect = document.getElementById('quiz-duration');
+                const timeLimit = parseInt(durationSelect.value);
                 
                 return `
 # 答题成绩
@@ -862,9 +866,10 @@
 **昵称:** ${result.nickname}
 **得分:** ${result.score}/${questions.length} (${percentage}%)
 **用时:** ${result.time}秒 (${this.formatTime(result.time)})
+**时间限制:** ${timeLimit}分钟
 **提交状态:** ${timeStatus}
 **提交时间:** ${new Date().toLocaleString('zh-CN')}
-**规定时间:** ${TimeManager.startTime.toLocaleString('zh-CN')} - ${new Date(TimeManager.startTime.getTime() + TimeManager.duration).toLocaleString('zh-CN')}
+**开始时间:** ${TimeManager.quizStartTime.toLocaleString('zh-CN')}
 
 ## 答题详情
 ${this.generateAnswerDetails(result)}
@@ -907,7 +912,8 @@ ${this.generateAnswerDetails(result)}
                     from: 'local',
                     id: Date.now(),
                     created_at: new Date().toISOString(),
-                    valid_submission: TimeManager.isWithinTimeLimit()
+                    valid_submission: TimeManager.isValidSubmission(),
+                    time_used: result.time // 使用实际用时
                 });
                 
                 ranking = this.deduplicateAndSort(ranking);
@@ -1088,11 +1094,11 @@ ${this.generateAnswerDetails(result)}
             },
             {
                 id: 10,
-                question: "吉林大学有（）个“双一流”建设学科（群）。",
+                question: "吉林大学有（）个"双一流"建设学科（群）。",
                 type: "fill",
                 correctAnswers: ["12"],
                 requiredMatches: 1
-            },
+            }
         ];
 
         // ==== 应用状态 ====
@@ -1132,9 +1138,6 @@ ${this.generateAnswerDetails(result)}
                 GitHubService.toggleAutoRefresh();
             });
             document.getElementById('create-issue-btn').addEventListener('click', createGitHubIssue);
-            document.getElementById('start-time').addEventListener('change', () => {
-                TimeManager.updateTimeStatus();
-            });
             
             // 检查是否有已保存的用户数据
             const savedUser = localStorage.getItem('currentUser');
@@ -1151,11 +1154,6 @@ ${this.generateAnswerDetails(result)}
         }
 
         function startQuiz() {
-            // 检查时间限制
-            if (!TimeManager.canStartQuiz()) {
-                return;
-            }
-            
             const nickname = document.getElementById('nickname').value.trim();
             if (!nickname) {
                 alert('请输入昵称！');
@@ -1170,13 +1168,13 @@ ${this.generateAnswerDetails(result)}
             state.currentUser = nickname;
             state.currentQuestionIndex = 0;
             state.userAnswers = new Array(questions.length).fill(null);
-            state.startTime = new Date();
             state.elapsedTime = 0;
             
             localStorage.setItem('currentUser', nickname);
             
+            // 开始计时
+            TimeManager.startQuiz();
             startTimer();
-            TimeManager.startCountdown();
             
             loginScreen.classList.add('hidden');
             quizScreen.classList.remove('hidden');
@@ -1267,7 +1265,7 @@ ${this.generateAnswerDetails(result)}
 
         function nextQuestion() {
             // 检查是否超时
-            if (!TimeManager.isWithinTimeLimit()) {
+            if (TimeManager.isTimeUp()) {
                 alert('答题时间已结束！');
                 submitQuiz();
                 return;
@@ -1315,30 +1313,41 @@ ${this.generateAnswerDetails(result)}
                 }
             });
             
+            // 使用实际用时（不超过时间限制）
+            const actualTimeUsed = TimeManager.getTimeUsed();
+            state.elapsedTime = actualTimeUsed;
+            
             // 显示结果
             document.getElementById('final-score').textContent = `${score}/${questions.length}`;
-            document.getElementById('final-time').textContent = formatTime(state.elapsedTime);
+            document.getElementById('final-time').textContent = formatTime(actualTimeUsed);
             
             // 显示提交状态
-            const isWithinTime = TimeManager.isWithinTimeLimit();
-            if (!isWithinTime) {
+            const isValid = TimeManager.isValidSubmission();
+            const resultTitle = document.getElementById('result-title');
+            
+            if (!isValid) {
+                resultTitle.textContent = '答题完成（超时提交）';
+                resultTitle.style.color = '#e74c3c';
                 GitHubService.showUploadStatus('⚠️ 超时提交，成绩可能无效', 'sync-warning');
+            } else {
+                resultTitle.textContent = '答题完成！';
+                resultTitle.style.color = '#2ecc71';
             }
             
             quizScreen.classList.add('hidden');
             resultScreen.classList.remove('hidden');
             
             // 自动保存到本地
-            saveResult(score);
+            saveResult(score, actualTimeUsed);
         }
 
-        function saveResult(score) {
+        function saveResult(score, timeUsed) {
             const result = {
                 nickname: state.currentUser,
                 score: score,
-                time: state.elapsedTime,
+                time: timeUsed,
                 date: new Date().toISOString(),
-                valid_submission: TimeManager.isWithinTimeLimit()
+                valid_submission: TimeManager.isValidSubmission()
             };
             
             GitHubService.saveToLocalStorage(result);
@@ -1484,6 +1493,7 @@ ${this.generateAnswerDetails(result)}
         }
 
         function restartQuiz() {
+            TimeManager.reset();
             resultScreen.classList.add('hidden');
             loginScreen.classList.remove('hidden');
         }
