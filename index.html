@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>答题系统</title>
+    <title>实时答题系统 - GitHub共享排行榜</title>
     <style>
         * {
             box-sizing: border-box;
@@ -67,7 +67,7 @@
             color: #555;
         }
         
-        input[type="text"] {
+        input[type="text"], input[type="datetime-local"] {
             width: 100%;
             padding: 15px;
             border: 2px solid #ddd;
@@ -76,7 +76,7 @@
             transition: border-color 0.3s;
         }
         
-        input[type="text"]:focus {
+        input[type="text"]:focus, input[type="datetime-local"]:focus {
             border-color: #3498db;
             outline: none;
             box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
@@ -116,6 +116,10 @@
             background: linear-gradient(90deg, #e74c3c, #c0392b);
         }
         
+        .btn-warning {
+            background: linear-gradient(90deg, #f39c12, #e67e22);
+        }
+        
         .question {
             margin-bottom: 25px;
             padding-bottom: 15px;
@@ -153,6 +157,18 @@
             margin-bottom: 20px;
             color: #e74c3c;
             font-weight: bold;
+        }
+        
+        .countdown-timer {
+            text-align: center;
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #e74c3c;
+            font-weight: bold;
+            background: #fff3cd;
+            padding: 10px;
+            border-radius: 8px;
+            border: 2px solid #ffeaa7;
         }
         
         .progress {
@@ -269,12 +285,25 @@
             color: white;
         }
         
+        .badge-warning {
+            background-color: #f39c12;
+            color: white;
+        }
+        
         .instructions {
             background-color: #f8f9fa;
             padding: 15px;
             border-radius: 10px;
             margin-bottom: 20px;
             border-left: 5px solid #3498db;
+        }
+        
+        .time-config {
+            background: linear-gradient(90deg, #fff3cd, #ffeaa7);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border-left: 4px solid #ffc107;
         }
         
         .github-info {
@@ -312,6 +341,12 @@
             border: 1px solid #bee5eb;
         }
         
+        .sync-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
         .loading {
             display: inline-block;
             width: 20px;
@@ -344,6 +379,16 @@
             100% { opacity: 1; }
         }
         
+        @keyframes warning-pulse {
+            0% { background-color: #fff3cd; }
+            50% { background-color: #ffeaa7; }
+            100% { background-color: #fff3cd; }
+        }
+        
+        .warning-pulse {
+            animation: warning-pulse 1s infinite;
+        }
+        
         @media (max-width: 768px) {
             .container {
                 padding: 10px;
@@ -372,7 +417,7 @@
     <div class="container">
         <!-- 登录界面 -->
         <div id="login-screen" class="card">
-            <h1>答题系统</h1>
+            <h1>实时答题系统 - GitHub共享排行榜</h1>
             
             <div class="github-info">
                 <p style="margin: 0; font-weight: bold; color: #155724;">
@@ -384,9 +429,26 @@
             <div class="instructions">
                 <p><strong>使用说明：</strong></p>
                 <p>1. 输入昵称开始答题</p>
-                <p>2. 完成答题后成绩自动创建GitHub Issue</p>
-                <p>3. 实时查看所有用户的排行榜</p>
-                <p>4. 排行榜数据来自GitHub Issues</p>
+                <p>2. 必须在开始时间后10分钟内完成提交</p>
+                <p>3. 完成答题后成绩自动创建GitHub Issue</p>
+                <p>4. 实时查看所有用户的排行榜</p>
+                <p style="color: #28a745; margin-top: 10px;">
+                    📍 完全基于GitHub，无需其他服务
+                </p>
+            </div>
+
+            <!-- 时间配置区域 -->
+            <div class="time-config">
+                <p style="margin-bottom: 10px; font-weight: bold;">答题时间设置</p>
+                <div class="form-group">
+                    <label for="start-time">开始时间：</label>
+                    <input type="datetime-local" id="start-time">
+                </div>
+                <div class="form-group">
+                    <label for="duration">答题时长（分钟）：</label>
+                    <input type="text" id="duration" value="10" readonly style="background-color: #f8f9fa;">
+                </div>
+                <div id="time-status" class="sync-status" style="display: none;"></div>
             </div>
             
             <div class="form-group">
@@ -407,6 +469,9 @@
             <div class="user-info">
                 <span>用户：<span id="current-user"></span></span>
                 <span>进度：<span id="progress-text">0/0</span></span>
+            </div>
+            <div class="countdown-timer" id="countdown-timer">
+                剩余时间：10:00
             </div>
             <div class="progress">
                 <div class="progress-bar" id="progress-bar"></div>
@@ -442,7 +507,7 @@
         <!-- 排行榜界面 -->
         <div id="ranking-screen" class="card hidden">
             <div class="flex">
-                <h2>排行榜</h2>
+                <h2>GitHub实时排行榜</h2>
                 <div style="display: flex; align-items: center;">
                     <span class="online-indicator"></span>
                     <span style="font-size: 14px; color: #28a745;">数据来自GitHub Issues</span>
@@ -473,7 +538,6 @@
     <script>
         // ==== GitHub 配置 ====
         const GITHUB_CONFIG = {
-            // 仓库信息
             owner: 'le0632',
             repo: 'test',
             
@@ -482,6 +546,189 @@
                 enabled: true,
                 interval: 10000, // 10秒刷新一次
                 isActive: true
+            }
+        };
+
+        // ==== 时间管理 ====
+        const TimeManager = {
+            startTime: null,
+            duration: 10 * 60 * 1000, // 10分钟，单位毫秒
+            countdownInterval: null,
+            timeRemaining: 0,
+            
+            // 初始化时间设置
+            init() {
+                // 设置默认开始时间为当前时间
+                const now = new Date();
+                const defaultStartTime = new Date(now.getTime() + 5 * 60 * 1000); // 默认5分钟后开始
+                document.getElementById('start-time').value = this.formatDateTimeLocal(defaultStartTime);
+                
+                this.updateTimeStatus();
+            },
+            
+            // 检查是否可以开始答题
+            canStartQuiz() {
+                const startTimeInput = document.getElementById('start-time').value;
+                if (!startTimeInput) {
+                    this.showTimeStatus('请设置开始时间', 'sync-error');
+                    return false;
+                }
+                
+                this.startTime = new Date(startTimeInput);
+                const now = new Date();
+                
+                if (now < this.startTime) {
+                    const timeUntilStart = this.startTime - now;
+                    const minutes = Math.floor(timeUntilStart / 60000);
+                    const seconds = Math.floor((timeUntilStart % 60000) / 1000);
+                    this.showTimeStatus(`答题尚未开始，请在 ${minutes}分${seconds}秒后开始`, 'sync-warning');
+                    return false;
+                }
+                
+                if (now > this.startTime + this.duration) {
+                    this.showTimeStatus('答题时间已结束', 'sync-error');
+                    return false;
+                }
+                
+                this.timeRemaining = this.startTime + this.duration - now;
+                this.showTimeStatus('可以开始答题', 'sync-success');
+                return true;
+            },
+            
+            // 开始倒计时
+            startCountdown() {
+                if (this.countdownInterval) {
+                    clearInterval(this.countdownInterval);
+                }
+                
+                this.countdownInterval = setInterval(() => {
+                    this.timeRemaining -= 1000;
+                    
+                    if (this.timeRemaining <= 0) {
+                        this.timeRemaining = 0;
+                        this.stopCountdown();
+                        this.handleTimeUp();
+                        return;
+                    }
+                    
+                    this.updateCountdownDisplay();
+                    
+                    // 最后1分钟警告
+                    if (this.timeRemaining <= 60000) {
+                        this.showTimeWarning();
+                    }
+                }, 1000);
+                
+                this.updateCountdownDisplay();
+            },
+            
+            // 停止倒计时
+            stopCountdown() {
+                if (this.countdownInterval) {
+                    clearInterval(this.countdownInterval);
+                    this.countdownInterval = null;
+                }
+            },
+            
+            // 更新倒计时显示
+            updateCountdownDisplay() {
+                const minutes = Math.floor(this.timeRemaining / 60000);
+                const seconds = Math.floor((this.timeRemaining % 60000) / 1000);
+                const countdownElement = document.getElementById('countdown-timer');
+                
+                countdownElement.textContent = `剩余时间：${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                
+                // 根据剩余时间改变样式
+                if (this.timeRemaining <= 60000) {
+                    countdownElement.style.background = '#f8d7da';
+                    countdownElement.style.color = '#721c24';
+                    countdownElement.style.borderColor = '#f5c6cb';
+                } else if (this.timeRemaining <= 300000) { // 5分钟
+                    countdownElement.style.background = '#fff3cd';
+                    countdownElement.style.color = '#856404';
+                    countdownElement.style.borderColor = '#ffeaa7';
+                }
+            },
+            
+            // 处理时间结束
+            handleTimeUp() {
+                const countdownElement = document.getElementById('countdown-timer');
+                countdownElement.textContent = '时间到！答题已结束';
+                countdownElement.style.background = '#f8d7da';
+                countdownElement.style.color = '#721c24';
+                countdownElement.classList.add('warning-pulse');
+                
+                // 禁用下一题按钮，强制提交
+                const nextBtn = document.getElementById('next-btn');
+                if (nextBtn.textContent === '提交答案') {
+                    nextBtn.click(); // 自动提交
+                } else {
+                    nextBtn.disabled = true;
+                    nextBtn.textContent = '时间到';
+                }
+                
+                alert('答题时间已结束！系统将自动提交您的答案。');
+            },
+            
+            // 显示时间警告
+            showTimeWarning() {
+                const countdownElement = document.getElementById('countdown-timer');
+                countdownElement.classList.add('warning-pulse');
+            },
+            
+            // 检查是否在有效时间内
+            isWithinTimeLimit() {
+                const now = new Date();
+                return now >= this.startTime && now <= this.startTime + this.duration;
+            },
+            
+            // 获取剩余时间（秒）
+            getRemainingTime() {
+                const now = new Date();
+                return Math.max(0, Math.floor((this.startTime + this.duration - now) / 1000));
+            },
+            
+            // 格式化日期时间为本地格式
+            formatDateTimeLocal(date) {
+                const year = date.getFullYear();
+                const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                const day = date.getDate().toString().padStart(2, '0');
+                const hours = date.getHours().toString().padStart(2, '0');
+                const minutes = date.getMinutes().toString().padStart(2, '0');
+                
+                return `${year}-${month}-${day}T${hours}:${minutes}`;
+            },
+            
+            // 更新时间状态显示
+            updateTimeStatus() {
+                const startTimeInput = document.getElementById('start-time').value;
+                if (!startTimeInput) return;
+                
+                this.startTime = new Date(startTimeInput);
+                const now = new Date();
+                const endTime = new Date(this.startTime.getTime() + this.duration);
+                
+                if (now < this.startTime) {
+                    const timeUntilStart = this.startTime - now;
+                    const minutes = Math.floor(timeUntilStart / 60000);
+                    this.showTimeStatus(`答题将在 ${minutes} 分钟后开始`, 'sync-warning');
+                } else if (now > endTime) {
+                    this.showTimeStatus('答题时间已结束', 'sync-error');
+                } else {
+                    const timeRemaining = endTime - now;
+                    const minutes = Math.floor(timeRemaining / 60000);
+                    this.showTimeStatus(`答题进行中，剩余 ${minutes} 分钟`, 'sync-success');
+                }
+            },
+            
+            // 显示时间状态
+            showTimeStatus(message, type) {
+                const statusEl = document.getElementById('time-status');
+                if (!statusEl) return;
+                
+                statusEl.textContent = message;
+                statusEl.className = `sync-status ${type}`;
+                statusEl.style.display = 'block';
             }
         };
 
@@ -607,13 +854,17 @@
             // 格式化Issue内容
             formatIssueBody(result) {
                 const percentage = ((result.score / questions.length) * 100).toFixed(1);
+                const timeStatus = TimeManager.isWithinTimeLimit() ? '有效提交' : '超时提交';
+                
                 return `
 # 答题成绩
 
 **昵称:** ${result.nickname}
 **得分:** ${result.score}/${questions.length} (${percentage}%)
 **用时:** ${result.time}秒 (${this.formatTime(result.time)})
+**提交状态:** ${timeStatus}
 **提交时间:** ${new Date().toLocaleString('zh-CN')}
+**规定时间:** ${TimeManager.startTime.toLocaleString('zh-CN')} - ${new Date(TimeManager.startTime.getTime() + TimeManager.duration).toLocaleString('zh-CN')}
 
 ## 答题详情
 ${this.generateAnswerDetails(result)}
@@ -655,7 +906,8 @@ ${this.generateAnswerDetails(result)}
                     ...result,
                     from: 'local',
                     id: Date.now(),
-                    created_at: new Date().toISOString()
+                    created_at: new Date().toISOString(),
+                    valid_submission: TimeManager.isWithinTimeLimit()
                 });
                 
                 ranking = this.deduplicateAndSort(ranking);
@@ -771,76 +1023,76 @@ ${this.generateAnswerDetails(result)}
 
         // ==== 题目数据 ====
         const questions = [
-        {
+            {
                 id: 1,
-                question: "吉林大学前卫南区的两个体育馆分别是（）体育馆和前卫体育馆。",
-                options: ["宋志平", "宋智平", "宋治平", "宋致平"],
-                answer: 2,
-                type: "choice"
-            },
-            {
-                id: 2,
-                question: "吉林大学共有（）个学科门类。",
-                options: ["10", "11", "12", "13"],
-                answer: 3,
-                type: "choice"
-            },
-            {
-                id: 3,
-                question: "吉林大学于2000年由多所高校合并组建而成，不包含以下（    ）高校。",
-                options: ["吉林工业大学", "吉林农业大学", "长春邮电学院", "长春科技大学"],
+                question: "非全日制、专升本、成人高考等形式的招生由（）负责。",
+                options: ["吉林大学本科生招生办公室", "吉林大学继续教育学院", "吉林大学国际教育学院", "吉林大学莱姆顿学院"],
                 answer: 1,
                 type: "choice"
             },
             {
+                id: 2,
+                question: "下列报考方式中采取在专业组内调剂的是（）。",
+                options: ["院校+专业", "院校+专业组", "专业+院校"],
+                answer: 1,
+                type: "choice"
+            },
+            {
+                id: 3,
+                question: "在2026年高考中（）和（）实行传统文理分科的选科模式。",
+                options: ["新疆、青海", "新疆、云南", "西藏、新疆", "西藏、宁夏"],
+                answer: 2,
+                type: "choice"
+            },
+            {
                 id: 4,
-                question: "吉林大学始建于（    ）年。",
-                options: ["1945", "1946", "1947", "1948"],
+                question: "“滑档”的考生只能等待（）征集志愿或下一批次的录取。",
+                options: ["本批次", "上一批次", "下一批次"],
                 answer: 0,
                 type: "choice"
             },
             {
                 id: 5,
-                question: "下列专业中不属于匡亚明班（拔尖学生培养基地）的专业是（    ）。",
-                options: ["汉语言文学", "考古学", "历史学", "哲学"],
-                answer: 2,
+                question: "“投档”即（）把考生档案投到了对应院校。",
+                options: ["院校招生办", "考生本人", "考生所在高中", "省考试院"],
+                answer: 3,
                 type: "choice"
             },
             {
                 id: 6,
-                question: "列举三个吉林大学前卫南区以吉大先贤名字命名的教学楼。（用英文逗号分隔）",
+                question: "平行志愿录取规则的核心是（）优先、遵循（）。",
                 type: "fill",
-                correctAnswers: ["王湘浩楼", "吕振羽楼", "唐敖庆楼", "匡亚明楼"],
-                requiredMatches: 3
+                correctAnswers: ["分数", "志愿"],
+                requiredMatches: 2
             },
             {
                 id: 7,
-                question: "吉林大学在长春有（）个校区，分别是（）。（用英文逗号分隔）",
+                question: "吉林大学招生协会是（）直属学生社团。",
                 type: "fill",
-                correctAnswers: ["6", "前卫校区", "新民校区", "朝阳校区", "和平校区", "南湖校区", "南岭校区"],
-                requiredMatches: 7
+                correctAnswers: ["吉林大学本科生招生办公室", "吉大本招办"],
+                requiredMatches: 2
             },
             {
                 id: 8,
-                question: "前卫四餐厅旁边是（）和（）两个餐厅。（用英文逗号分隔）",
+                question: "吉林大学“2+7”拔尖人才培养体系中的“2”指的是（）班和（）班。",
                 type: "fill",
-                correctAnswers: ["翔远餐厅", "鸿鹄餐厅"],
+                correctAnswers: ["唐敖庆", "匡亚明"],
                 requiredMatches: 2
             },
             {
                 id: 9,
-                question: "吉林大学前卫南区的两个湖分别叫（）和（）。（用英文逗号分隔）",
+                question: "举出吉林大学一个专业特色班；（）。",
                 type: "fill",
-                correctAnswers: ["清湖", "晏湖"],
-                requiredMatches: 2
+                correctAnswers: ["PPE（哲学、政治学、经济学）", "涉外法治人才试验班", "眼科学", "生物育种特色班", "集成电路科技英才特色班", "PPE"],
+                requiredMatches: 1
             },
             {
                 id: 10,
-                question: "吉林大学现任校长是（）。",
+                question: "吉林大学有（）个“双一流”建设学科（群）。",
                 type: "fill",
-                correctAnswers: ["张希"],
+                correctAnswers: ["12"],
                 requiredMatches: 1
-            }
+            },
         ];
 
         // ==== 应用状态 ====
@@ -861,6 +1113,10 @@ ${this.generateAnswerDetails(result)}
 
         // ==== 核心功能函数 ====
         function initApp() {
+            // 初始化时间管理器
+            TimeManager.init();
+            
+            // 初始化GitHub服务
             GitHubService.init();
             
             // 绑定事件
@@ -876,6 +1132,9 @@ ${this.generateAnswerDetails(result)}
                 GitHubService.toggleAutoRefresh();
             });
             document.getElementById('create-issue-btn').addEventListener('click', createGitHubIssue);
+            document.getElementById('start-time').addEventListener('change', () => {
+                TimeManager.updateTimeStatus();
+            });
             
             // 检查是否有已保存的用户数据
             const savedUser = localStorage.getItem('currentUser');
@@ -892,6 +1151,11 @@ ${this.generateAnswerDetails(result)}
         }
 
         function startQuiz() {
+            // 检查时间限制
+            if (!TimeManager.canStartQuiz()) {
+                return;
+            }
+            
             const nickname = document.getElementById('nickname').value.trim();
             if (!nickname) {
                 alert('请输入昵称！');
@@ -912,6 +1176,7 @@ ${this.generateAnswerDetails(result)}
             localStorage.setItem('currentUser', nickname);
             
             startTimer();
+            TimeManager.startCountdown();
             
             loginScreen.classList.add('hidden');
             quizScreen.classList.remove('hidden');
@@ -1001,6 +1266,13 @@ ${this.generateAnswerDetails(result)}
         }
 
         function nextQuestion() {
+            // 检查是否超时
+            if (!TimeManager.isWithinTimeLimit()) {
+                alert('答题时间已结束！');
+                submitQuiz();
+                return;
+            }
+            
             const currentQuestion = questions[state.currentQuestionIndex];
             
             if (currentQuestion.type === "choice") {
@@ -1025,6 +1297,7 @@ ${this.generateAnswerDetails(result)}
         }
 
         async function submitQuiz() {
+            TimeManager.stopCountdown();
             clearInterval(state.timerInterval);
             
             let score = 0;
@@ -1046,6 +1319,12 @@ ${this.generateAnswerDetails(result)}
             document.getElementById('final-score').textContent = `${score}/${questions.length}`;
             document.getElementById('final-time').textContent = formatTime(state.elapsedTime);
             
+            // 显示提交状态
+            const isWithinTime = TimeManager.isWithinTimeLimit();
+            if (!isWithinTime) {
+                GitHubService.showUploadStatus('⚠️ 超时提交，成绩可能无效', 'sync-warning');
+            }
+            
             quizScreen.classList.add('hidden');
             resultScreen.classList.remove('hidden');
             
@@ -1058,7 +1337,8 @@ ${this.generateAnswerDetails(result)}
                 nickname: state.currentUser,
                 score: score,
                 time: state.elapsedTime,
-                date: new Date().toISOString()
+                date: new Date().toISOString(),
+                valid_submission: TimeManager.isWithinTimeLimit()
             };
             
             GitHubService.saveToLocalStorage(result);
@@ -1168,13 +1448,16 @@ ${this.generateAnswerDetails(result)}
                         '<span class="badge badge-secondary">本地</span>' : 
                         '<span class="badge badge-primary">GitHub</span>';
                     
+                    const validBadge = item.valid_submission === false ? 
+                        '<span class="badge badge-warning">超时</span>' : '';
+                    
                     const issueLink = item.issue_url ? 
                         `<a href="${item.issue_url}" target="_blank" title="查看Issue">🔗</a>` : '';
                     
                     html += `
                         <tr class="${rowClass}">
                             <td>${index + 1}</td>
-                            <td>${item.nickname} ${userBadge} ${topBadge} ${sourceBadge} ${issueLink}</td>
+                            <td>${item.nickname} ${userBadge} ${topBadge} ${sourceBadge} ${validBadge} ${issueLink}</td>
                             <td>${item.score}/${item.total || questions.length}</td>
                             <td>${GitHubService.formatTime(item.time)}</td>
                             <td>${formatDate(item.created_at)}</td>
