@@ -661,20 +661,6 @@
             }
         };
 
-        // ==== GitHub 配置 ====
-        const GITHUB_CONFIG = {
-            // 仓库信息
-            owner: 'le0632',
-            repo: 'test',
-            
-            // 自动刷新配置
-            autoRefresh: {
-                enabled: true,
-                interval: 10000, // 10秒刷新一次
-                isActive: true
-            }
-        };
-
         // ==== GitHub 服务 ====
         const GitHubService = {
             autoRefreshInterval: null,
@@ -683,46 +669,44 @@
             init() {
                 this.showSyncStatus('✅ GitHub排行榜已启用', 'sync-success');
                 
-                if (this.isConfigured()) {
-                    // 启动自动刷新
-                    this.startAutoRefresh();
-                } else {
-                    this.showSyncStatus('⚠️ 请配置GitHub仓库信息', 'sync-error');
-                }
+                // 启动自动刷新
+                this.startAutoRefresh();
             },
             
-            // 检查配置
-            isConfigured() {
-                return GITHUB_CONFIG.owner && GITHUB_CONFIG.repo && 
-                       GITHUB_CONFIG.owner !== 'YOUR_GITHUB_USERNAME' && 
-                       GITHUB_CONFIG.repo !== 'YOUR_REPO_NAME';
-            },
-            
-            // 从GitHub Issues加载排行榜数据
+            // 从GitHub Issues加载排行榜数据 - 使用代理解决CORS问题
             async loadRanking() {
-                if (!this.isConfigured()) {
-                    return this.getLocalRanking();
-                }
-                
                 try {
                     this.showSyncStatus('正在从GitHub加载排行榜...', 'sync-loading');
                     
-                    // 使用GitHub REST API获取Issues
-                    const response = await fetch(
-                        `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/issues?labels=quiz-score&state=all&per_page=100&sort=created&direction=desc`
-                    );
+                    // 方法1: 使用CORS代理
+                    const proxyUrl = 'https://corsproxy.io/?';
+                    const targetUrl = `https://api.github.com/repos/le0632/test/issues?labels=quiz-score&state=all&per_page=100&sort=created&direction=desc`;
+                    
+                    const response = await fetch(proxyUrl + encodeURIComponent(targetUrl), {
+                        headers: {
+                            'Accept': 'application/vnd.github.v3+json',
+                            'User-Agent': 'Quiz-System-App'
+                        }
+                    });
                     
                     if (!response.ok) {
-                        throw new Error(`GitHub API错误: ${response.status}`);
+                        // 如果代理失败，尝试直接调用（可能会被CORS阻止）
+                        console.warn('代理调用失败，尝试本地数据');
+                        return this.getLocalRanking();
                     }
                     
                     const issues = await response.json();
                     const ranking = this.parseIssuesToRanking(issues);
                     
+                    // 合并本地数据
+                    const localRanking = this.getLocalRanking();
+                    const combinedRanking = this.combineRankings(ranking, localRanking);
+                    
                     this.showSyncStatus('排行榜加载成功！', 'sync-success');
                     setTimeout(() => this.hideSyncStatus(), 2000);
                     
-                    return ranking;
+                    return combinedRanking;
+                    
                 } catch (error) {
                     console.error('从GitHub加载排行榜失败:', error);
                     this.showSyncStatus('使用本地数据', 'sync-error');
@@ -733,6 +717,12 @@
             // 解析Issues为排行榜数据
             parseIssuesToRanking(issues) {
                 const ranking = [];
+                
+                // 确保issues是数组
+                if (!Array.isArray(issues)) {
+                    console.warn('GitHub返回的数据不是数组:', issues);
+                    return ranking;
+                }
                 
                 issues.forEach(issue => {
                     try {
@@ -747,6 +737,7 @@
                                 time: parseInt(time),
                                 created_at: issue.created_at,
                                 issue_url: issue.html_url,
+                                issue_number: issue.number,
                                 from: 'github'
                             });
                         }
@@ -755,21 +746,41 @@
                     }
                 });
                 
+                return ranking;
+            },
+            
+            // 合并GitHub和本地排行榜
+            combineRankings(githubRanking, localRanking) {
+                // 创建一个集合来跟踪已存在的记录
+                const existingRecords = new Set();
+                const combined = [];
+                
+                // 先添加GitHub数据
+                githubRanking.forEach(item => {
+                    const key = `${item.nickname}-${item.score}-${item.time}`;
+                    combined.push(item);
+                    existingRecords.add(key);
+                });
+                
+                // 添加本地数据（排除重复）
+                localRanking.forEach(item => {
+                    const key = `${item.nickname}-${item.score}-${item.time}`;
+                    if (!existingRecords.has(key)) {
+                        combined.push(item);
+                    }
+                });
+                
                 // 排序：分数优先，用时其次
-                ranking.sort((a, b) => {
+                combined.sort((a, b) => {
                     if (a.score !== b.score) return b.score - a.score;
                     return a.time - b.time;
                 });
                 
-                return ranking.slice(0, 50); // 只返回前50名
+                return combined.slice(0, 50); // 只返回前50名
             },
             
             // 创建GitHub Issue来保存成绩
             async createScoreIssue(result) {
-                if (!this.isConfigured()) {
-                    throw new Error('GitHub仓库未配置');
-                }
-                
                 // 先保存到本地
                 this.saveToLocalStorage(result);
                 
@@ -777,7 +788,7 @@
                 const title = `成绩 - ${result.nickname} - 得分:${result.score}/${questions.length} - 用时:${result.time}秒`;
                 const body = this.formatIssueBody(result);
                 
-                // 由于GitHub API需要认证，我们提供创建Issue的链接
+                // 生成创建Issue的URL
                 const issueUrl = this.generateIssueUrl(title, body);
                 
                 return {
@@ -791,7 +802,7 @@
             generateIssueUrl(title, body) {
                 const encodedTitle = encodeURIComponent(title);
                 const encodedBody = encodeURIComponent(body);
-                return `https://github.com/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/issues/new?title=${encodedTitle}&body=${encodedBody}&labels=quiz-score`;
+                return `https://github.com/le0632/test/issues/new?title=${encodedTitle}&body=${encodedBody}&labels=quiz-score`;
             },
             
             // 格式化Issue内容
@@ -808,7 +819,7 @@
 **时间限制:** 10分钟
 **提交状态:** ${timeStatus}
 **提交时间:** ${new Date().toLocaleString('zh-CN')}
-**开始时间:** ${TimeManager.quizStartTime.toLocaleString('zh-CN')}
+**开始时间:** ${TimeManager.quizStartTime ? TimeManager.quizStartTime.toLocaleString('zh-CN') : 'N/A'}
 
 ## 答题详情
 ${this.generateAnswerDetails(result)}
@@ -896,10 +907,10 @@ ${this.generateAnswerDetails(result)}
                 }
                 
                 this.autoRefreshInterval = setInterval(async () => {
-                    if (GITHUB_CONFIG.autoRefresh.isActive) {
+                    if (GitHubService.autoRefreshEnabled) {
                         await this.refreshRankingIfVisible();
                     }
-                }, GITHUB_CONFIG.autoRefresh.interval);
+                }, 10000); // 10秒刷新一次
             },
             
             stopAutoRefresh() {
@@ -916,10 +927,10 @@ ${this.generateAnswerDetails(result)}
             },
             
             toggleAutoRefresh() {
-                GITHUB_CONFIG.autoRefresh.isActive = !GITHUB_CONFIG.autoRefresh.isActive;
+                GitHubService.autoRefreshEnabled = !GitHubService.autoRefreshEnabled;
                 const button = document.getElementById('auto-refresh-toggle');
                 
-                if (GITHUB_CONFIG.autoRefresh.isActive) {
+                if (GitHubService.autoRefreshEnabled) {
                     button.textContent = '自动刷新: 开';
                     button.className = 'btn-success';
                     this.startAutoRefresh();
@@ -965,6 +976,9 @@ ${this.generateAnswerDetails(result)}
                 }
             }
         };
+
+        // 添加全局变量
+        GitHubService.autoRefreshEnabled = true;
 
         // ==== 题目数据 ====
         const questions = [
@@ -1019,7 +1033,7 @@ ${this.generateAnswerDetails(result)}
             },
             {
                 id: 8,
-                question: "吉林大学“2+7”拔尖人才培养体系中的“2”指的是（）班和（）班。",
+                question: "吉林大学"2+7"拔尖人才培养体系中的"2"指的是（）班和（）班。",
                 type: "fill",
                 correctAnswers: ["唐敖庆", "匡亚明"],
                 requiredMatches: 2
@@ -1033,7 +1047,7 @@ ${this.generateAnswerDetails(result)}
             },
             {
                 id: 10,
-                question: "吉林大学有（）个“双一流”建设学科（群）。",
+                question: "吉林大学有（）个"双一流"建设学科（群）。",
                 type: "fill",
                 correctAnswers: ["12"],
                 requiredMatches: 1
@@ -1398,10 +1412,12 @@ ${this.generateAnswerDetails(result)}
                     const issueLink = item.issue_url ? 
                         `<a href="${item.issue_url}" target="_blank" title="查看Issue">🔗</a>` : '';
                     
+                    const issueNumber = item.issue_number ? `#${item.issue_number}` : '';
+                    
                     html += `
                         <tr class="${rowClass}">
                             <td>${index + 1}</td>
-                            <td>${item.nickname} ${userBadge} ${topBadge} ${sourceBadge} ${validBadge} ${issueLink}</td>
+                            <td>${item.nickname} ${userBadge} ${topBadge} ${sourceBadge} ${validBadge} ${issueNumber} ${issueLink}</td>
                             <td>${item.score}/${item.total || questions.length}</td>
                             <td>${GitHubService.formatTime(item.time)}</td>
                             <td>${formatDate(item.created_at)}</td>
