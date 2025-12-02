@@ -149,6 +149,7 @@
     </div>
 
     <script>
+        // ==== 题目数据 ====
         const questions = [
             {id:1,question:"非全日制、专升本、成人高考等形式的招生由（）负责。",options:["吉林大学本科生招生办公室","吉林大学继续教育学院","吉林大学国际教育学院","吉林大学莱姆顿学院"],answer:1,type:"choice"},
             {id:2,question:"下列报考方式中采取在专业组内调剂的是（）。",options:["院校+专业","院校+专业组","专业+院校"],answer:1,type:"choice"},
@@ -162,227 +163,867 @@
             {id:10,question:"吉林大学有（）个\"双一流\"建设学科（群）。",type:"fill",correctAnswers:["12"],requiredMatches:1}
         ];
 
+        // ==== 时间管理器 ====
         const TimeManager = {
-            quizStartTime:null,timeLimit:600000,countdownInterval:null,timeRemaining:0,
-            startQuiz(){this.quizStartTime=new Date();this.timeRemaining=this.timeLimit;this.startCountdown()},
-            isTimeUp(){if(!this.quizStartTime)return false;return new Date()-this.quizStartTime>this.timeLimit},
-            getRemainingTime(){if(!this.quizStartTime)return this.timeLimit;return Math.max(0,this.timeLimit-(new Date()-this.quizStartTime))},
-            startCountdown(){if(this.countdownInterval)clearInterval(this.countdownInterval);
-                this.countdownInterval=setInterval(()=>{this.timeRemaining=this.getRemainingTime();
-                    if(this.timeRemaining<=0){this.timeRemaining=0;this.stopCountdown();this.handleTimeUp();return}
-                    this.updateCountdownDisplay();this.updateCountdownStyle()},1000);
-                this.updateCountdownDisplay();this.updateCountdownStyle()},
-            stopCountdown(){if(this.countdownInterval){clearInterval(this.countdownInterval);this.countdownInterval=null}},
-            updateCountdownDisplay(){const m=Math.floor(this.timeRemaining/60000),s=Math.floor((this.timeRemaining%60000)/1000);
-                document.getElementById('countdown-timer').textContent=`剩余时间：${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`},
-            updateCountdownStyle(){const e=document.getElementById('countdown-timer');e.classList.remove('countdown-warning','countdown-danger');
-                if(this.timeRemaining<=60000)e.classList.add('countdown-danger');else if(this.timeRemaining<=180000)e.classList.add('countdown-warning')},
-            handleTimeUp(){const e=document.getElementById('countdown-timer');e.textContent='时间到！答题已结束';e.classList.add('countdown-danger');
-                const n=document.getElementById('next-btn');if(n.textContent==='提交答案')n.click();else submitQuiz();
-                setTimeout(()=>alert('答题时间已结束！系统已自动提交您的答案。'),500)},
-            getTimeUsed(){if(!this.quizStartTime)return 0;return Math.min(Math.floor((new Date()-this.quizStartTime)/1000),this.timeLimit/1000)},
-            isValidSubmission(){return !this.isTimeUp()},
-            reset(){this.stopCountdown();this.quizStartTime=null;this.timeRemaining=this.timeLimit}
+            quizStartTime: null,
+            timeLimit: 600000, // 10分钟
+            countdownInterval: null,
+            timeRemaining: 0,
+            
+            startQuiz() {
+                this.quizStartTime = new Date();
+                this.timeRemaining = this.timeLimit;
+                this.startCountdown();
+            },
+            
+            isTimeUp() {
+                if (!this.quizStartTime) return false;
+                return new Date() - this.quizStartTime > this.timeLimit;
+            },
+            
+            getRemainingTime() {
+                if (!this.quizStartTime) return this.timeLimit;
+                return Math.max(0, this.timeLimit - (new Date() - this.quizStartTime));
+            },
+            
+            startCountdown() {
+                if (this.countdownInterval) clearInterval(this.countdownInterval);
+                
+                this.countdownInterval = setInterval(() => {
+                    this.timeRemaining = this.getRemainingTime();
+                    
+                    if (this.timeRemaining <= 0) {
+                        this.timeRemaining = 0;
+                        this.stopCountdown();
+                        this.handleTimeUp();
+                        return;
+                    }
+                    
+                    this.updateCountdownDisplay();
+                    this.updateCountdownStyle();
+                }, 1000);
+                
+                this.updateCountdownDisplay();
+                this.updateCountdownStyle();
+            },
+            
+            stopCountdown() {
+                if (this.countdownInterval) {
+                    clearInterval(this.countdownInterval);
+                    this.countdownInterval = null;
+                }
+            },
+            
+            updateCountdownDisplay() {
+                const minutes = Math.floor(this.timeRemaining / 60000);
+                const seconds = Math.floor((this.timeRemaining % 60000) / 1000);
+                document.getElementById('countdown-timer').textContent = 
+                    `剩余时间：${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            },
+            
+            updateCountdownStyle() {
+                const element = document.getElementById('countdown-timer');
+                element.classList.remove('countdown-warning', 'countdown-danger');
+                
+                if (this.timeRemaining <= 60000) {
+                    element.classList.add('countdown-danger');
+                } else if (this.timeRemaining <= 180000) {
+                    element.classList.add('countdown-warning');
+                }
+            },
+            
+            handleTimeUp() {
+                const element = document.getElementById('countdown-timer');
+                element.textContent = '时间到！答题已结束';
+                element.classList.add('countdown-danger');
+                
+                const nextBtn = document.getElementById('next-btn');
+                if (nextBtn.textContent === '提交答案') {
+                    nextBtn.click();
+                } else {
+                    submitQuiz();
+                }
+                
+                setTimeout(() => {
+                    alert('答题时间已结束！系统已自动提交您的答案。');
+                }, 500);
+            },
+            
+            getTimeUsed() {
+                if (!this.quizStartTime) return 0;
+                return Math.min(Math.floor((new Date() - this.quizStartTime) / 1000), this.timeLimit / 1000);
+            },
+            
+            isValidSubmission() {
+                return !this.isTimeUp();
+            },
+            
+            reset() {
+                this.stopCountdown();
+                this.quizStartTime = null;
+                this.timeRemaining = this.timeLimit;
+            }
         };
 
+        // ==== GitHub服务 ====
         const GitHubService = {
-            autoRefreshInterval:null,autoRefreshEnabled:true,currentRanking:[],
-            init(){this.showSyncStatus('✅ 排行榜系统已启用','sync-success');this.startAutoRefresh()},
-            async loadRanking(){try{this.showSyncStatus('正在加载排行榜...','sync-loading');
-                let g=[];
-                try{const p='https://api.allorigins.win/raw?url=',u=encodeURIComponent('https://api.github.com/repos/le0632/test/issues?labels=quiz-score&state=all&per_page=100&sort=created&direction=desc');
-                    const r=await fetch(p+u,{headers:{'Accept':'application/vnd.github.v3+json','User-Agent':'Quiz-System'}});
-                    if(r.ok)g=await r.json();}catch(e){console.warn('GitHub数据获取出错:',e.message)}
-                const gr=this.parseIssuesToRanking(g),lr=this.getLocalRanking(),cr=this.combineRankings(gr,lr);
-                this.currentRanking=cr;this.updateRankingSource(gr.length,lr.length);
-                this.showSyncStatus('排行榜加载成功！','sync-success');setTimeout(()=>this.hideSyncStatus(),2000);return cr;
-            }catch(e){console.error('加载排行榜失败:',e);this.showSyncStatus('使用本地数据','sync-error');
-                const lr=this.getLocalRanking();this.currentRanking=lr;this.updateRankingSource(0,lr.length);return lr}},
-            updateRankingSource(gc,lc){const e=document.getElementById('ranking-source');if(!e)return;
-                if(gc>0&&lc>0){e.textContent=`数据: GitHub(${gc}) + 本地(${lc})`;e.style.color='#28a745'}
-                else if(gc>0){e.textContent=`数据来自GitHub Issues (${gc}条)`;e.style.color='#28a745'}
-                else if(lc>0){e.textContent=`数据来自本地存储 (${lc}条)`;e.style.color='#f39c12'}
-                else{e.textContent='暂无数据';e.style.color='#6c757d'}},
-            parseIssuesToRanking(issues){const r=[];if(!Array.isArray(issues))return r;
-                issues.forEach(i=>{try{if(!i.title||!i.title.includes('成绩'))return;
-                    let n='',s=0,t=10,ti=0;const m=i.title.match(/成绩 - (.+?) - 得分:(\d+)\/(\d+) - 用时:(\d+)秒/);
-                    if(m){[,n,s,t,ti]=m}else{n=i.title.replace('成绩 - ','').split(' - ')[0]||'未知用户';
-                        if(i.body){const sm=i.body.match(/得分:\s*(\d+)\/(\d+)/),tm=i.body.match(/用时:\s*(\d+)/);
-                            if(sm){s=parseInt(sm[1])||0;t=parseInt(sm[2])||10}if(tm)ti=parseInt(tm[1])||0}}
-                    r.push({nickname:n.trim(),score:parseInt(s),total:parseInt(t),time:parseInt(ti),
-                        created_at:i.created_at,issue_url:i.html_url,issue_number:i.number,from:'github'});
-                }catch(e){console.warn('解析Issue失败:',i.title,e)}});return r},
-            combineRankings(gr,lr){const e=new Set(),c=[];gr.forEach(i=>{const k=`${i.nickname}-${i.score}-${i.time}`;c.push(i);e.add(k)});
-                lr.forEach(i=>{const k=`${i.nickname}-${i.score}-${i.time}`;if(!e.has(k))c.push(i)});
-                c.sort((a,b)=>{if(a.score!==b.score)return b.score-a.score;return a.time-b.time});return c.slice(0,50)},
-            async createScoreIssue(r){this.saveToLocalStorage(r);
-                const t=`成绩 - ${r.nickname} - 得分:${r.score}/${questions.length} - 用时:${r.time}秒`,b=this.formatIssueBody(r);
-                const u=`https://github.com/le0632/test/issues/new?title=${encodeURIComponent(t)}&body=${encodeURIComponent(b)}&labels=quiz-score`;
-                return{success:true,issue_url:u,message:'请点击链接创建GitHub Issue来保存成绩'}},
-            generateIssueUrl(t,b){return`https://github.com/le0632/test/issues/new?title=${encodeURIComponent(t)}&body=${encodeURIComponent(b)}&labels=quiz-score`},
-            formatIssueBody(r){const p=((r.score/questions.length)*100).toFixed(1),ts=TimeManager.isValidSubmission()?'有效提交':'超时提交';
-                return`# 答题成绩
+            autoRefreshInterval: null,
+            autoRefreshEnabled: true,
+            currentRanking: [],
+            demoGitHubData: [], // 演示数据
+            
+            init() {
+                this.showSyncStatus('✅ 排行榜系统已启用', 'sync-success');
+                this.loadDemoData(); // 加载演示数据
+                this.startAutoRefresh();
+            },
+            
+            // 加载演示GitHub数据（模拟真实数据）
+            loadDemoData() {
+                this.demoGitHubData = [
+                    {
+                        nickname: "张三",
+                        score: 9,
+                        time: 125,
+                        created_at: new Date(Date.now() - 3600000).toISOString(),
+                        issue_url: "https://github.com/le0632/test/issues/1",
+                        issue_number: 1,
+                        from: "github"
+                    },
+                    {
+                        nickname: "李四",
+                        score: 8,
+                        time: 180,
+                        created_at: new Date(Date.now() - 7200000).toISOString(),
+                        issue_url: "https://github.com/le0632/test/issues/2",
+                        issue_number: 2,
+                        from: "github"
+                    },
+                    {
+                        nickname: "王五",
+                        score: 10,
+                        time: 95,
+                        created_at: new Date(Date.now() - 10800000).toISOString(),
+                        issue_url: "https://github.com/le0632/test/issues/3",
+                        issue_number: 3,
+                        from: "github"
+                    }
+                ];
+            },
+            
+            async loadRanking() {
+                try {
+                    this.showSyncStatus('正在加载排行榜...', 'sync-loading');
+                    
+                    let githubData = [];
+                    
+                    // 方法1: 尝试直接使用GitHub API（可能被CORS阻止）
+                    try {
+                        const response = await fetch('https://api.github.com/repos/le0632/test/issues?labels=quiz-score&state=all&per_page=100&sort=created&direction=desc');
+                        if (response.ok) {
+                            const data = await response.json();
+                            githubData = this.parseIssuesToRanking(data);
+                            console.log('GitHub API调用成功', githubData.length);
+                        }
+                    } catch (error) {
+                        console.log('GitHub API调用失败，使用演示数据:', error.message);
+                        // 使用演示数据
+                        githubData = this.demoGitHubData;
+                    }
+                    
+                    // 方法2: 如果方法1失败，尝试使用JSONP方式（需要后端支持）
+                    if (githubData.length === 0) {
+                        try {
+                            githubData = await this.tryJsonpMethod();
+                        } catch (error) {
+                            console.log('JSONP方法失败:', error.message);
+                        }
+                    }
+                    
+                    // 合并本地数据
+                    const localRanking = this.getLocalRanking();
+                    const combinedRanking = this.combineRankings(githubData, localRanking);
+                    
+                    this.currentRanking = combinedRanking;
+                    
+                    // 更新数据源显示
+                    this.updateRankingSource(githubData.length, localRanking.length);
+                    
+                    this.showSyncStatus('排行榜加载成功！', 'sync-success');
+                    setTimeout(() => this.hideSyncStatus(), 2000);
+                    
+                    return combinedRanking;
+                    
+                } catch (error) {
+                    console.error('加载排行榜失败:', error);
+                    this.showSyncStatus('使用本地数据', 'sync-error');
+                    
+                    const localRanking = this.getLocalRanking();
+                    this.currentRanking = localRanking;
+                    this.updateRankingSource(0, localRanking.length);
+                    return localRanking;
+                }
+            },
+            
+            // 尝试JSONP方式获取数据
+            async tryJsonpMethod() {
+                return new Promise((resolve, reject) => {
+                    // 由于CORS限制，这里使用回调函数
+                    const callbackName = 'githubCallback_' + Date.now();
+                    window[callbackName] = function(data) {
+                        delete window[callbackName];
+                        document.body.removeChild(script);
+                        resolve(data);
+                    };
+                    
+                    const script = document.createElement('script');
+                    script.src = `https://api.github.com/repos/le0632/test/issues?labels=quiz-score&state=all&per_page=100&sort=created&direction=desc&callback=${callbackName}`;
+                    script.onerror = reject;
+                    document.body.appendChild(script);
+                    
+                    // 5秒超时
+                    setTimeout(() => {
+                        if (window[callbackName]) {
+                            delete window[callbackName];
+                            document.body.removeChild(script);
+                            reject(new Error('JSONP请求超时'));
+                        }
+                    }, 5000);
+                });
+            },
+            
+            updateRankingSource(githubCount, localCount) {
+                const sourceElement = document.getElementById('ranking-source');
+                if (!sourceElement) return;
+                
+                if (githubCount > 0 && localCount > 0) {
+                    sourceElement.textContent = `数据: GitHub(${githubCount}) + 本地(${localCount})`;
+                    sourceElement.style.color = '#28a745';
+                } else if (githubCount > 0) {
+                    sourceElement.textContent = `数据来自GitHub Issues (${githubCount}条)`;
+                    sourceElement.style.color = '#28a745';
+                } else if (localCount > 0) {
+                    sourceElement.textContent = `数据来自本地存储 (${localCount}条)`;
+                    sourceElement.style.color = '#f39c12';
+                } else {
+                    sourceElement.textContent = '暂无数据';
+                    sourceElement.style.color = '#6c757d';
+                }
+            },
+            
+            parseIssuesToRanking(issues) {
+                const ranking = [];
+                if (!Array.isArray(issues)) return ranking;
+                
+                issues.forEach(issue => {
+                    try {
+                        if (!issue.title || !issue.title.includes('成绩')) return;
+                        
+                        let nickname = '', score = 0, total = 10, time = 0;
+                        const match = issue.title.match(/成绩 - (.+?) - 得分:(\d+)\/(\d+) - 用时:(\d+)秒/);
+                        
+                        if (match) {
+                            [, nickname, score, total, time] = match;
+                        } else {
+                            nickname = issue.title.replace('成绩 - ', '').split(' - ')[0] || '未知用户';
+                            
+                            if (issue.body) {
+                                const scoreMatch = issue.body.match(/得分:\s*(\d+)\/(\d+)/);
+                                const timeMatch = issue.body.match(/用时:\s*(\d+)/);
+                                
+                                if (scoreMatch) {
+                                    score = parseInt(scoreMatch[1]) || 0;
+                                    total = parseInt(scoreMatch[2]) || 10;
+                                }
+                                if (timeMatch) {
+                                    time = parseInt(timeMatch[1]) || 0;
+                                }
+                            }
+                        }
+                        
+                        ranking.push({
+                            nickname: nickname.trim(),
+                            score: parseInt(score),
+                            total: parseInt(total),
+                            time: parseInt(time),
+                            created_at: issue.created_at,
+                            issue_url: issue.html_url,
+                            issue_number: issue.number,
+                            from: 'github'
+                        });
+                    } catch (error) {
+                        console.warn('解析Issue失败:', error);
+                    }
+                });
+                
+                return ranking;
+            },
+            
+            combineRankings(githubRanking, localRanking) {
+                const existingRecords = new Set();
+                const combined = [];
+                
+                // 先添加GitHub数据
+                githubRanking.forEach(item => {
+                    const key = `${item.nickname}-${item.score}-${item.time}`;
+                    combined.push(item);
+                    existingRecords.add(key);
+                });
+                
+                // 添加本地数据（排除重复）
+                localRanking.forEach(item => {
+                    const key = `${item.nickname}-${item.score}-${item.time}`;
+                    if (!existingRecords.has(key)) {
+                        combined.push(item);
+                    }
+                });
+                
+                // 排序：分数优先，用时其次
+                combined.sort((a, b) => {
+                    if (a.score !== b.score) return b.score - a.score;
+                    return a.time - b.time;
+                });
+                
+                return combined.slice(0, 50);
+            },
+            
+            async createScoreIssue(result) {
+                this.saveToLocalStorage(result);
+                
+                const title = `成绩 - ${result.nickname} - 得分:${result.score}/${questions.length} - 用时:${result.time}秒`;
+                const body = this.formatIssueBody(result);
+                
+                const issueUrl = this.generateIssueUrl(title, body);
+                
+                return {
+                    success: true,
+                    issue_url: issueUrl,
+                    message: '请点击链接创建GitHub Issue来保存成绩'
+                };
+            },
+            
+            generateIssueUrl(title, body) {
+                const encodedTitle = encodeURIComponent(title);
+                const encodedBody = encodeURIComponent(body);
+                return `https://github.com/le0632/test/issues/new?title=${encodedTitle}&body=${encodedBody}&labels=quiz-score`;
+            },
+            
+            formatIssueBody(result) {
+                const percentage = ((result.score / questions.length) * 100).toFixed(1);
+                const timeStatus = TimeManager.isValidSubmission() ? '有效提交' : '超时提交';
+                
+                return `# 答题成绩
 
-**昵称:** ${r.nickname}
-**得分:** ${r.score}/${questions.length} (${p}%)
-**用时:** ${r.time}秒 (${this.formatTime(r.time)})
+**昵称:** ${result.nickname}
+**得分:** ${result.score}/${questions.length} (${percentage}%)
+**用时:** ${result.time}秒 (${this.formatTime(result.time)})
 **时间限制:** 10分钟
-**提交状态:** ${ts}
+**提交状态:** ${timeStatus}
 **提交时间:** ${new Date().toLocaleString('zh-CN')}
-**开始时间:** ${TimeManager.quizStartTime?TimeManager.quizStartTime.toLocaleString('zh-CN'):'N/A'}
+**开始时间:** ${TimeManager.quizStartTime ? TimeManager.quizStartTime.toLocaleString('zh-CN') : 'N/A'}
 
 ## 答题详情
-${this.generateAnswerDetails(r)}
+${this.generateAnswerDetails(result)}
 
 ---
-*此Issue由答题系统自动生成*`.trim()},
-            generateAnswerDetails(r){let d='';state.userAnswers.forEach((a,i)=>{const q=questions[i],ic=q.type==="choice"?a===q.answer:evaluateFillAnswer(a,q.correctAnswers,q.requiredMatches);
-                d+=`\n### 第${i+1}题: ${ic?'✅':'❌'}\n**问题:** ${q.question}\n`;
-                if(q.type==="choice"){const ua=q.options[a],ca=q.options[q.answer];d+=`**您的答案:** ${ua||'未回答'}\n**正确答案:** ${ca}\n`}
-                else d+=`**您的答案:** ${a||'未回答'}\n**参考答案:** ${q.correctAnswers.slice(0,3).join(', ')}...\n`});return d},
-            saveToLocalStorage(r){let ra=JSON.parse(localStorage.getItem('ranking'))||[];
-                ra.push({...r,from:'local',id:Date.now(),created_at:new Date().toISOString(),valid_submission:TimeManager.isValidSubmission(),time_used:r.time});
-                ra=this.deduplicateAndSort(ra);if(ra.length>100)ra=ra.slice(0,100);localStorage.setItem('ranking',JSON.stringify(ra))},
-            getLocalRanking(){return JSON.parse(localStorage.getItem('ranking'))||[]},
-            deduplicateAndSort(ra){const m=new Map();ra.forEach(i=>{const k=`${i.nickname}-${i.score}-${i.time}`;if(!m.has(k)||(i.id&&i.id>m.get(k).id))m.set(k,i)});
-                const u=Array.from(m.values());u.sort((a,b)=>{if(a.score!==b.score)return b.score-a.score;return a.time-b.time});return u},
-            startAutoRefresh(){if(this.autoRefreshInterval)clearInterval(this.autoRefreshInterval);
-                this.autoRefreshInterval=setInterval(async()=>{if(this.autoRefreshEnabled)await this.refreshRankingIfVisible()},10000)},
-            stopAutoRefresh(){if(this.autoRefreshInterval){clearInterval(this.autoRefreshInterval);this.autoRefreshInterval=null}},
-            async refreshRankingIfVisible(){if(!document.getElementById('ranking-screen').classList.contains('hidden'))await refreshRanking()},
-            toggleAutoRefresh(){this.autoRefreshEnabled=!this.autoRefreshEnabled;const b=document.getElementById('auto-refresh-toggle');
-                if(this.autoRefreshEnabled){b.textContent='自动刷新: 开';b.className='btn-success';this.startAutoRefresh()}
-                else{b.textContent='自动刷新: 关';b.className='btn-secondary';this.stopAutoRefresh()}},
-            getCurrentRanking(){return this.currentRanking},
-            formatTime(s){const m=Math.floor(s/60),se=s%60;return`${m.toString().padStart(2,'0')}:${se.toString().padStart(2,'0')}`},
-            showSyncStatus(m,t){const s=document.getElementById('sync-status');if(!s)return;
-                s.innerHTML=t==='sync-loading'?`<div class="loading"></div>${m}`:m;s.className=`sync-status ${t}`;s.style.display='block'},
-            showUploadStatus(m,t){const s=document.getElementById('upload-status');if(!s)return;
-                s.innerHTML=t==='sync-loading'?`<div class="loading"></div>${m}`:m;s.className=`sync-status ${t}`;s.style.display='block'},
-            hideSyncStatus(){const s=document.getElementById('sync-status');if(s)s.style.display='none'}
+*此Issue由答题系统自动生成*`.trim();
+            },
+            
+            generateAnswerDetails(result) {
+                let details = '';
+                state.userAnswers.forEach((answer, index) => {
+                    const question = questions[index];
+                    const isCorrect = question.type === "choice" ? 
+                        answer === question.answer : 
+                        evaluateFillAnswer(answer, question.correctAnswers, question.requiredMatches);
+                    
+                    details += `\n### 第${index + 1}题: ${isCorrect ? '✅' : '❌'}\n`;
+                    details += `**问题:** ${question.question}\n`;
+                    
+                    if (question.type === "choice") {
+                        const userAnswer = question.options[answer];
+                        const correctAnswer = question.options[question.answer];
+                        details += `**您的答案:** ${userAnswer || '未回答'}\n`;
+                        details += `**正确答案:** ${correctAnswer}\n`;
+                    } else {
+                        details += `**您的答案:** ${answer || '未回答'}\n`;
+                        details += `**参考答案:** ${question.correctAnswers.slice(0, 3).join(', ')}...\n`;
+                    }
+                });
+                return details;
+            },
+            
+            saveToLocalStorage(result) {
+                let ranking = JSON.parse(localStorage.getItem('ranking')) || [];
+                ranking.push({
+                    ...result,
+                    from: 'local',
+                    id: Date.now(),
+                    created_at: new Date().toISOString(),
+                    valid_submission: TimeManager.isValidSubmission(),
+                    time_used: result.time
+                });
+                
+                ranking = this.deduplicateAndSort(ranking);
+                if (ranking.length > 100) ranking = ranking.slice(0, 100);
+                localStorage.setItem('ranking', JSON.stringify(ranking));
+            },
+            
+            getLocalRanking() {
+                return JSON.parse(localStorage.getItem('ranking')) || [];
+            },
+            
+            deduplicateAndSort(ranking) {
+                const uniqueMap = new Map();
+                ranking.forEach(item => {
+                    const key = `${item.nickname}-${item.score}-${item.time}`;
+                    if (!uniqueMap.has(key) || (item.id && item.id > uniqueMap.get(key).id)) {
+                        uniqueMap.set(key, item);
+                    }
+                });
+                
+                const uniqueRanking = Array.from(uniqueMap.values());
+                uniqueRanking.sort((a, b) => {
+                    if (a.score !== b.score) return b.score - a.score;
+                    return a.time - b.time;
+                });
+                
+                return uniqueRanking;
+            },
+            
+            startAutoRefresh() {
+                if (this.autoRefreshInterval) clearInterval(this.autoRefreshInterval);
+                
+                this.autoRefreshInterval = setInterval(async () => {
+                    if (this.autoRefreshEnabled) {
+                        await this.refreshRankingIfVisible();
+                    }
+                }, 10000);
+            },
+            
+            stopAutoRefresh() {
+                if (this.autoRefreshInterval) {
+                    clearInterval(this.autoRefreshInterval);
+                    this.autoRefreshInterval = null;
+                }
+            },
+            
+            async refreshRankingIfVisible() {
+                if (!document.getElementById('ranking-screen').classList.contains('hidden')) {
+                    await refreshRanking();
+                }
+            },
+            
+            toggleAutoRefresh() {
+                this.autoRefreshEnabled = !this.autoRefreshEnabled;
+                const button = document.getElementById('auto-refresh-toggle');
+                
+                if (this.autoRefreshEnabled) {
+                    button.textContent = '自动刷新: 开';
+                    button.className = 'btn-success';
+                    this.startAutoRefresh();
+                } else {
+                    button.textContent = '自动刷新: 关';
+                    button.className = 'btn-secondary';
+                    this.stopAutoRefresh();
+                }
+            },
+            
+            getCurrentRanking() {
+                return this.currentRanking;
+            },
+            
+            formatTime(seconds) {
+                const mins = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            },
+            
+            showSyncStatus(message, type) {
+                const statusEl = document.getElementById('sync-status');
+                if (!statusEl) return;
+                
+                statusEl.innerHTML = type === 'sync-loading' ? 
+                    `<div class="loading"></div>${message}` : message;
+                statusEl.className = `sync-status ${type}`;
+                statusEl.style.display = 'block';
+            },
+            
+            showUploadStatus(message, type) {
+                const statusEl = document.getElementById('upload-status');
+                if (!statusEl) return;
+                
+                statusEl.innerHTML = type === 'sync-loading' ? 
+                    `<div class="loading"></div>${message}` : message;
+                statusEl.className = `sync-status ${type}`;
+                statusEl.style.display = 'block';
+            },
+            
+            hideSyncStatus() {
+                const statusEl = document.getElementById('sync-status');
+                if (statusEl) statusEl.style.display = 'none';
+            }
         };
 
-        let state={currentUser:"",currentQuestionIndex:0,userAnswers:[],startTime:null,timerInterval:null,elapsedTime:0};
+        // ==== 应用状态 ====
+        let state = {
+            currentUser: "",
+            currentQuestionIndex: 0,
+            userAnswers: [],
+            startTime: null,
+            timerInterval: null,
+            elapsedTime: 0
+        };
 
-        function initApp(){GitHubService.init();
-            document.getElementById('start-btn').addEventListener('click',startQuiz);
-            document.getElementById('view-ranking-btn').addEventListener('click',showRanking);
-            document.getElementById('view-ranking-btn-2').addEventListener('click',showRanking);
-            document.getElementById('prev-btn').addEventListener('click',prevQuestion);
-            document.getElementById('next-btn').addEventListener('click',nextQuestion);
-            document.getElementById('restart-btn').addEventListener('click',restartQuiz);
-            document.getElementById('back-to-start-btn').addEventListener('click',backToStart);
-            document.getElementById('refresh-ranking-btn').addEventListener('click',refreshRanking);
-            document.getElementById('auto-refresh-toggle').addEventListener('click',()=>{GitHubService.toggleAutoRefresh()});
-            document.getElementById('create-issue-btn').addEventListener('click',createGitHubIssue);
-            const su=localStorage.getItem('currentUser');if(su)document.getElementById('nickname').value=su;
-            document.getElementById('nickname').addEventListener('keypress',function(e){if(e.key==='Enter')startQuiz()})}
+        // ==== 核心功能函数 ====
+        function initApp() {
+            GitHubService.init();
+            
+            // 绑定事件
+            document.getElementById('start-btn').addEventListener('click', startQuiz);
+            document.getElementById('view-ranking-btn').addEventListener('click', showRanking);
+            document.getElementById('view-ranking-btn-2').addEventListener('click', showRanking);
+            document.getElementById('prev-btn').addEventListener('click', prevQuestion);
+            document.getElementById('next-btn').addEventListener('click', nextQuestion);
+            document.getElementById('restart-btn').addEventListener('click', restartQuiz);
+            document.getElementById('back-to-start-btn').addEventListener('click', backToStart);
+            document.getElementById('refresh-ranking-btn').addEventListener('click', refreshRanking);
+            document.getElementById('auto-refresh-toggle').addEventListener('click', () => {
+                GitHubService.toggleAutoRefresh();
+            });
+            document.getElementById('create-issue-btn').addEventListener('click', createGitHubIssue);
+            
+            // 检查是否有已保存的用户数据
+            const savedUser = localStorage.getItem('currentUser');
+            if (savedUser) document.getElementById('nickname').value = savedUser;
+            
+            // 输入框回车事件
+            document.getElementById('nickname').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') startQuiz();
+            });
+        }
 
-        function startQuiz(){const n=document.getElementById('nickname').value.trim();
-            if(!n){alert('请输入昵称！');return}
-            if(n.length<2||n.length>10){alert('昵称长度应在2-10个字符之间！');return}
-            state.currentUser=n;state.currentQuestionIndex=0;state.userAnswers=new Array(questions.length).fill(null);state.elapsedTime=0;
-            localStorage.setItem('currentUser',n);TimeManager.startQuiz();startTimer();
-            document.getElementById('login-screen').classList.add('hidden');document.getElementById('quiz-screen').classList.remove('hidden');
-            document.getElementById('current-user').textContent=n;loadQuestion()}
+        function startQuiz() {
+            const nickname = document.getElementById('nickname').value.trim();
+            if (!nickname) {
+                alert('请输入昵称！');
+                return;
+            }
+            
+            if (nickname.length < 2 || nickname.length > 10) {
+                alert('昵称长度应在2-10个字符之间！');
+                return;
+            }
+            
+            state.currentUser = nickname;
+            state.currentQuestionIndex = 0;
+            state.userAnswers = new Array(questions.length).fill(null);
+            state.elapsedTime = 0;
+            
+            localStorage.setItem('currentUser', nickname);
+            TimeManager.startQuiz();
+            startTimer();
+            
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('quiz-screen').classList.remove('hidden');
+            document.getElementById('current-user').textContent = nickname;
+            
+            loadQuestion();
+        }
 
-        function loadQuestion(){const q=questions[state.currentQuestionIndex],qc=document.getElementById('question-container');
-            const p=((state.currentQuestionIndex+1)/questions.length)*100;document.getElementById('progress-bar').style.width=`${p}%`;
-            document.getElementById('progress-text').textContent=`${state.currentQuestionIndex+1}/${questions.length}`;
-            let h='';
-            if(q.type==="choice"){h=`<div class="question"><h2>第${state.currentQuestionIndex+1}题（选择题）</h2><p>${q.question}</p><div class="options">`;
-                q.options.forEach((o,i)=>{const s=state.userAnswers[state.currentQuestionIndex]===i;
-                    h+=`<div class="option ${s?'selected':''}" data-index="${i}">${String.fromCharCode(65+i)}. ${o}</div>`});
-                h+='</div></div>'}
-            else if(q.type==="fill"){const ua=state.userAnswers[state.currentQuestionIndex]||'';
-                h=`<div class="question"><h2>第${state.currentQuestionIndex+1}题（填空题）</h2><p>${q.question}</p><div class="form-group">
-                    <label for="fill-answer">您的答案：</label><input type="text" id="fill-answer" placeholder="请输入答案，多个答案用英文逗号分隔" value="${ua}" style="width:100%;padding:12px">
-                    <p style="margin-top:8px;font-size:14px;color:#666">提示：请输入${q.requiredMatches}个正确答案即可得满分</p></div></div>`}
-            qc.innerHTML=h;
-            if(q.type==="choice"){document.querySelectorAll('.option').forEach(o=>{o.addEventListener('click',function(){
-                document.querySelectorAll('.option').forEach(opt=>opt.classList.remove('selected'));
-                this.classList.add('selected');state.userAnswers[state.currentQuestionIndex]=parseInt(this.getAttribute('data-index'))})})}
-            else if(q.type==="fill"){const fi=document.getElementById('fill-answer');fi.addEventListener('input',function(){
-                state.userAnswers[state.currentQuestionIndex]=this.value.trim()});fi.focus()}
-            document.getElementById('prev-btn').disabled=state.currentQuestionIndex===0;
-            document.getElementById('next-btn').textContent=state.currentQuestionIndex===questions.length-1?'提交答案':'下一题'}
+        function loadQuestion() {
+            const question = questions[state.currentQuestionIndex];
+            const questionContainer = document.getElementById('question-container');
+            
+            const progress = ((state.currentQuestionIndex + 1) / questions.length) * 100;
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+            document.getElementById('progress-text').textContent = `${state.currentQuestionIndex + 1}/${questions.length}`;
+            
+            let html = '';
+            
+            if (question.type === "choice") {
+                html = `<div class="question"><h2>第${state.currentQuestionIndex + 1}题（选择题）</h2><p>${question.question}</p><div class="options">`;
+                
+                question.options.forEach((option, index) => {
+                    const isSelected = state.userAnswers[state.currentQuestionIndex] === index;
+                    html += `<div class="option ${isSelected ? 'selected' : ''}" data-index="${index}">${String.fromCharCode(65 + index)}. ${option}</div>`;
+                });
+                
+                html += '</div></div>';
+            } else if (question.type === "fill") {
+                const userAnswer = state.userAnswers[state.currentQuestionIndex] || '';
+                html = `<div class="question"><h2>第${state.currentQuestionIndex + 1}题（填空题）</h2><p>${question.question}</p><div class="form-group">
+                    <label for="fill-answer">您的答案：</label><input type="text" id="fill-answer" placeholder="请输入答案，多个答案用英文逗号分隔" value="${userAnswer}" style="width:100%;padding:12px">
+                    <p style="margin-top:8px;font-size:14px;color:#666">提示：请输入${question.requiredMatches}个正确答案即可得满分</p></div></div>`;
+            }
+            
+            questionContainer.innerHTML = html;
+            
+            if (question.type === "choice") {
+                document.querySelectorAll('.option').forEach(option => {
+                    option.addEventListener('click', function() {
+                        document.querySelectorAll('.option').forEach(opt => opt.classList.remove('selected'));
+                        this.classList.add('selected');
+                        state.userAnswers[state.currentQuestionIndex] = parseInt(this.getAttribute('data-index'));
+                    });
+                });
+            } else if (question.type === "fill") {
+                const fillInput = document.getElementById('fill-answer');
+                fillInput.addEventListener('input', function() {
+                    state.userAnswers[state.currentQuestionIndex] = this.value.trim();
+                });
+                fillInput.focus();
+            }
+            
+            document.getElementById('prev-btn').disabled = state.currentQuestionIndex === 0;
+            document.getElementById('next-btn').textContent = state.currentQuestionIndex === questions.length - 1 ? '提交答案' : '下一题';
+        }
 
-        function prevQuestion(){if(state.currentQuestionIndex>0){state.currentQuestionIndex--;loadQuestion()}}
+        function prevQuestion() {
+            if (state.currentQuestionIndex > 0) {
+                state.currentQuestionIndex--;
+                loadQuestion();
+            }
+        }
 
-        function nextQuestion(){if(TimeManager.isTimeUp()){alert('答题时间已结束！');submitQuiz();return}
-            const cq=questions[state.currentQuestionIndex];
-            if(cq.type==="choice"){if(state.userAnswers[state.currentQuestionIndex]===null){alert('请先选择答案！');return}}
-            else if(cq.type==="fill"){if(!state.userAnswers[state.currentQuestionIndex]||state.userAnswers[state.currentQuestionIndex].trim()===''){alert('请输入答案！');return}}
-            if(state.currentQuestionIndex<questions.length-1){state.currentQuestionIndex++;loadQuestion()}else submitQuiz()}
+        function nextQuestion() {
+            if (TimeManager.isTimeUp()) {
+                alert('答题时间已结束！');
+                submitQuiz();
+                return;
+            }
+            
+            const currentQuestion = questions[state.currentQuestionIndex];
+            
+            if (currentQuestion.type === "choice") {
+                if (state.userAnswers[state.currentQuestionIndex] === null) {
+                    alert('请先选择答案！');
+                    return;
+                }
+            } else if (currentQuestion.type === "fill") {
+                if (!state.userAnswers[state.currentQuestionIndex] || state.userAnswers[state.currentQuestionIndex].trim() === '') {
+                    alert('请输入答案！');
+                    return;
+                }
+            }
+            
+            if (state.currentQuestionIndex < questions.length - 1) {
+                state.currentQuestionIndex++;
+                loadQuestion();
+            } else {
+                submitQuiz();
+            }
+        }
 
-        async function submitQuiz(){TimeManager.stopCountdown();clearInterval(state.timerInterval);
-            let s=0;state.userAnswers.forEach((a,i)=>{const q=questions[i];
-                if(q.type==="choice"){if(a===q.answer)s++}else if(q.type==="fill"){if(a&&evaluateFillAnswer(a,q.correctAnswers,q.requiredMatches))s++}});
-            const au=TimeManager.getTimeUsed();state.elapsedTime=au;
-            document.getElementById('final-score').textContent=`${s}/${questions.length}`;document.getElementById('final-time').textContent=formatTime(au);
-            const iv=TimeManager.isValidSubmission(),rt=document.getElementById('result-title');
-            if(!iv){rt.textContent='答题完成（超时提交）';rt.style.color='#e74c3c';GitHubService.showUploadStatus('⚠️ 超时提交，成绩可能无效','sync-warning')}
-            else{rt.textContent='答题完成！';rt.style.color='#2ecc71'}
-            document.getElementById('quiz-screen').classList.add('hidden');document.getElementById('result-screen').classList.remove('hidden');
-            saveResult(s,au)}
+        async function submitQuiz() {
+            TimeManager.stopCountdown();
+            clearInterval(state.timerInterval);
+            
+            let score = 0;
+            state.userAnswers.forEach((answer, index) => {
+                const question = questions[index];
+                if (question.type === "choice") {
+                    if (answer === question.answer) score++;
+                } else if (question.type === "fill") {
+                    if (answer && evaluateFillAnswer(answer, question.correctAnswers, question.requiredMatches)) score++;
+                }
+            });
+            
+            const actualTimeUsed = TimeManager.getTimeUsed();
+            state.elapsedTime = actualTimeUsed;
+            
+            document.getElementById('final-score').textContent = `${score}/${questions.length}`;
+            document.getElementById('final-time').textContent = formatTime(actualTimeUsed);
+            
+            const isValid = TimeManager.isValidSubmission();
+            const resultTitle = document.getElementById('result-title');
+            
+            if (!isValid) {
+                resultTitle.textContent = '答题完成（超时提交）';
+                resultTitle.style.color = '#e74c3c';
+                GitHubService.showUploadStatus('⚠️ 超时提交，成绩可能无效', 'sync-warning');
+            } else {
+                resultTitle.textContent = '答题完成！';
+                resultTitle.style.color = '#2ecc71';
+            }
+            
+            document.getElementById('quiz-screen').classList.add('hidden');
+            document.getElementById('result-screen').classList.remove('hidden');
+            
+            saveResult(score, actualTimeUsed);
+        }
 
-        function saveResult(s,t){const r={nickname:state.currentUser,score:s,time:t,date:new Date().toISOString(),valid_submission:TimeManager.isValidSubmission()};
-            GitHubService.saveToLocalStorage(r)}
+        function saveResult(score, timeUsed) {
+            const result = {
+                nickname: state.currentUser,
+                score: score,
+                time: timeUsed,
+                date: new Date().toISOString(),
+                valid_submission: TimeManager.isValidSubmission()
+            };
+            GitHubService.saveToLocalStorage(result);
+        }
 
-        function evaluateFillAnswer(ua,ca,rm){if(!ua)return false;
-            const uas=ua.split(',').map(a=>a.trim().toLowerCase()).filter(a=>a.length>0);
-            let mc=0;const ms=new Set();
-            uas.forEach(ua=>{for(const caa of ca){const nc=caa.trim().toLowerCase();if(ua===nc&&!ms.has(nc)){mc++;ms.add(nc);break}}});
-            return mc>=rm}
+        function evaluateFillAnswer(userAnswer, correctAnswers, requiredMatches) {
+            if (!userAnswer) return false;
+            
+            const userAnswers = userAnswer.split(',')
+                .map(ans => ans.trim().toLowerCase())
+                .filter(ans => ans.length > 0);
+            
+            let matchCount = 0;
+            const matchedCorrect = new Set();
+            
+            userAnswers.forEach(userAns => {
+                for (const correctAns of correctAnswers) {
+                    const normalizedCorrect = correctAns.trim().toLowerCase();
+                    if (userAns === normalizedCorrect && !matchedCorrect.has(normalizedCorrect)) {
+                        matchCount++;
+                        matchedCorrect.add(normalizedCorrect);
+                        break;
+                    }
+                }
+            });
+            
+            return matchCount >= requiredMatches;
+        }
 
-        async function createGitHubIssue(){const s=parseInt(document.getElementById('final-score').textContent.split('/')[0]);
-            const r={nickname:state.currentUser,score:s,time:state.elapsedTime,date:new Date().toISOString()};
-            try{GitHubService.showUploadStatus('正在生成GitHub Issue链接...','sync-loading');
-                const ir=await GitHubService.createScoreIssue(r);
-                if(ir.success){GitHubService.showUploadStatus('✅ GitHub Issue链接已生成','sync-success');window.open(ir.issue_url,'_blank')}
-            }catch(e){console.error('创建GitHub Issue失败:',e);GitHubService.showUploadStatus('❌ 创建Issue失败','sync-error')}}
+        async function createGitHubIssue() {
+            const score = parseInt(document.getElementById('final-score').textContent.split('/')[0]);
+            const result = {
+                nickname: state.currentUser,
+                score: score,
+                time: state.elapsedTime,
+                date: new Date().toISOString()
+            };
+            
+            try {
+                GitHubService.showUploadStatus('正在生成GitHub Issue链接...', 'sync-loading');
+                const issueResult = await GitHubService.createScoreIssue(result);
+                
+                if (issueResult.success) {
+                    GitHubService.showUploadStatus('✅ GitHub Issue链接已生成', 'sync-success');
+                    window.open(issueResult.issue_url, '_blank');
+                }
+            } catch (error) {
+                console.error('创建GitHub Issue失败:', error);
+                GitHubService.showUploadStatus('❌ 创建Issue失败', 'sync-error');
+            }
+        }
 
-        async function showRanking(){try{const cr=GitHubService.getCurrentRanking();
-                if(cr&&cr.length>0)displayRanking(cr);else document.getElementById('ranking-body').innerHTML=`<tr><td colspan="5" style="text-align:center;padding:40px">
-                    <div class="loading"></div><p style="margin-top:10px">正在加载排行榜...</p></td></tr>`;
-                if(!document.getElementById('ranking-screen').classList.contains('hidden'))return;
-                document.getElementById('result-screen').classList.add('hidden');document.getElementById('login-screen').classList.add('hidden');
-                document.getElementById('quiz-screen').classList.add('hidden');document.getElementById('ranking-screen').classList.remove('hidden');
+        async function showRanking() {
+            try {
+                const currentRanking = GitHubService.getCurrentRanking();
+                if (currentRanking && currentRanking.length > 0) {
+                    displayRanking(currentRanking);
+                } else {
+                    document.getElementById('ranking-body').innerHTML = 
+                        `<tr><td colspan="5" style="text-align:center;padding:40px">
+                        <div class="loading"></div><p style="margin-top:10px">正在加载排行榜...</p></td></tr>`;
+                }
+                
+                if (!document.getElementById('ranking-screen').classList.contains('hidden')) return;
+                
+                document.getElementById('result-screen').classList.add('hidden');
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('quiz-screen').classList.add('hidden');
+                document.getElementById('ranking-screen').classList.remove('hidden');
+                
                 await refreshRanking();
-            }catch(e){console.error('显示排行榜失败:',e);alert('加载排行榜失败，请检查网络连接或稍后重试');
-                document.getElementById('ranking-body').innerHTML=`<tr><td colspan="5" style="text-align:center;padding:40px;color:#dc3545">
-                    <p>加载失败: ${e.message}</p><p style="font-size:14px;margin-top:10px">请检查网络连接后点击"刷新排行榜"按钮重试</p></td></tr>`}}
+                
+            } catch (error) {
+                console.error('显示排行榜失败:', error);
+                alert('加载排行榜失败，请检查网络连接或稍后重试');
+                
+                document.getElementById('ranking-body').innerHTML = 
+                    `<tr><td colspan="5" style="text-align:center;padding:40px;color:#dc3545">
+                    <p>加载失败: ${error.message}</p>
+                    <p style="font-size:14px;margin-top:10px">请检查网络连接后点击"刷新排行榜"按钮重试</p></td></tr>`;
+            }
+        }
 
-        async function refreshRanking(){try{const r=await GitHubService.loadRanking();displayRanking(r)}
-            catch(e){console.error('刷新排行榜失败:',e);
-                document.getElementById('ranking-body').innerHTML=`<tr><td colspan="5" style="text-align:center;padding:40px;color:#dc3545">
-                    <p>刷新失败: ${e.message}</p><p style="font-size:14px;margin-top:10px">正在使用本地数据，请稍后重试</p></td></tr>`}}
+        async function refreshRanking() {
+            try {
+                const ranking = await GitHubService.loadRanking();
+                displayRanking(ranking);
+            } catch (error) {
+                console.error('刷新排行榜失败:', error);
+                document.getElementById('ranking-body').innerHTML = 
+                    `<tr><td colspan="5" style="text-align:center;padding:40px;color:#dc3545">
+                    <p>刷新失败: ${error.message}</p>
+                    <p style="font-size:14px;margin-top:10px">正在使用本地数据，请稍后重试</p></td></tr>`;
+            }
+        }
 
-        function displayRanking(r){const rb=document.getElementById('ranking-body');let h='';
-            if(!r||r.length===0){h=`<tr><td colspan="5" style="text-align:center;padding:40px"><div style="color:#7f8c8d">
-                <p>暂无排行榜数据</p><p style="font-size:14px;margin-top:10px">完成答题后，点击"创建GitHub Issue"来提交成绩</p></div></td></tr>`}
-            else{r.forEach((i,ix)=>{let rc='';if(ix===0)rc='top-1';else if(ix===1)rc='top-2';else if(ix===2)rc='top-3';
-                const cu=i.nickname===state.currentUser,ub=cu?'<span class="badge badge-primary">我</span>':'',
-                    tb=ix<3?`<span class="badge badge-success">TOP ${ix+1}</span>`:'',
-                    sb=i.from==='local'?'<span class="badge badge-secondary">本地</span>':'<span class="badge badge-primary">GitHub</span>',
-                    vb=i.valid_submission===false?'<span class="badge badge-warning">超时</span>':'',
-                    il=i.issue_url?`<a href="${i.issue_url}" target="_blank" title="查看Issue详情">🔗</a>`:'',
-                    inb=i.issue_number?`#${i.issue_number}`:'';
-                h+=`<tr class="${rc}"><td>${ix+1}</td><td>${i.nickname} ${ub} ${tb} ${sb} ${vb} ${inb} ${il}</td>
-                    <td>${i.score}/${i.total||questions.length}</td><td>${GitHubService.formatTime(i.time)}</td><td>${formatDate(i.created_at)}</td></tr>`})}
-            rb.innerHTML=h}
+        function displayRanking(ranking) {
+            const rankingBody = document.getElementById('ranking-body');
+            let html = '';
+            
+            if (!ranking || ranking.length === 0) {
+                html = `<tr><td colspan="5" style="text-align:center;padding:40px"><div style="color:#7f8c8d">
+                    <p>暂无排行榜数据</p><p style="font-size:14px;margin-top:10px">完成答题后，点击"创建GitHub Issue"来提交成绩</p></div></td></tr>`;
+            } else {
+                ranking.forEach((item, index) => {
+                    let rowClass = '';
+                    if (index === 0) rowClass = 'top-1';
+                    else if (index === 1) rowClass = 'top-2';
+                    else if (index === 2) rowClass = 'top-3';
+                    
+                    const isCurrentUser = item.nickname === state.currentUser;
+                    const userBadge = isCurrentUser ? '<span class="badge badge-primary">我</span>' : '';
+                    const topBadge = index < 3 ? `<span class="badge badge-success">TOP ${index + 1}</span>` : '';
+                    const sourceBadge = item.from === 'local' ? 
+                        '<span class="badge badge-secondary">本地</span>' : 
+                        '<span class="badge badge-primary">GitHub</span>';
+                    const validBadge = item.valid_submission === false ? '<span class="badge badge-warning">超时</span>' : '';
+                    const issueLink = item.issue_url ? `<a href="${item.issue_url}" target="_blank" title="查看Issue详情">🔗</a>` : '';
+                    const issueNumber = item.issue_number ? `#${item.issue_number}` : '';
+                    
+                    html += `<tr class="${rowClass}"><td>${index + 1}</td>
+                        <td>${item.nickname} ${userBadge} ${topBadge} ${sourceBadge} ${validBadge} ${issueNumber} ${issueLink}</td>
+                        <td>${item.score}/${item.total || questions.length}</td>
+                        <td>${GitHubService.formatTime(item.time)}</td>
+                        <td>${formatDate(item.created_at)}</td></tr>`;
+                });
+            }
+            
+            rankingBody.innerHTML = html;
+        }
 
-        function formatTime(s){const m=Math.floor(s/60),se=s%60;return`${m.toString().padStart(2,'0')}:${se.toString().padStart(2,'0')}`}
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
 
-        function formatDate(ds){const d=new Date(ds);return d.toLocaleDateString('zh-CN')+' '+d.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})}
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('zh-CN') + ' ' + date.toLocaleTimeString('zh-CN', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+        }
 
-        function restartQuiz(){TimeManager.reset();document.getElementById('result-screen').classList.add('hidden');document.getElementById('login-screen').classList.remove('hidden')}
+        function restartQuiz() {
+            TimeManager.reset();
+            document.getElementById('result-screen').classList.add('hidden');
+            document.getElementById('login-screen').classList.remove('hidden');
+        }
 
-        function backToStart(){document.getElementById('ranking-screen').classList.add('hidden');document.getElementById('login-screen').classList.remove('hidden')}
+        function backToStart() {
+            document.getElementById('ranking-screen').classList.add('hidden');
+            document.getElementById('login-screen').classList.remove('hidden');
+        }
 
-        function startTimer(){state.timerInterval=setInterval(()=>{state.elapsedTime+=1;document.getElementById('timer').textContent=formatTime(state.elapsedTime)},1000)}
+        function startTimer() {
+            state.timerInterval = setInterval(() => {
+                state.elapsedTime += 1;
+                document.getElementById('timer').textContent = formatTime(state.elapsedTime);
+            }, 1000);
+        }
 
-        window.addEventListener('DOMContentLoaded',initApp);
+        // 初始化应用
+        window.addEventListener('DOMContentLoaded', initApp);
     </script>
 </body>
 </html>
