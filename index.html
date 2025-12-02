@@ -377,7 +377,7 @@
                     };
                     
                     const script = document.createElement('script');
-                    script.src = `https://api.github.com/repos/le0632/test/issues?labels=quiz-score&state=all&per_page=100&sort=created&direction=desc&callback=${callbackName}`;
+                    script.src = `https://api.github.com/repos/le0632/test/issues?state=all&per_page=100&sort=created&direction=desc&callback=${callbackName}`;
                     script.onerror = reject;
                     document.body.appendChild(script);
                     
